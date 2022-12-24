@@ -42,13 +42,13 @@ public class Collaborate implements CRDTListener {
     }
 
     @Override
-    public void onCRDTInsert(CRDTItem item, int pos) {
+    public void onCRDTInsert(CRDTItem item) {
         // TODO Auto-generated method stub
 
     }
 
     @Override
-    public void onCRDTDelete(CRDTItem item, int pos) {
+    public void onCRDTDelete(CRDTItem item) {
         // TODO Auto-generated method stub
 
     }

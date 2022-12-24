@@ -7,6 +7,7 @@ import javax.swing.text.PlainDocument;
 import javax.swing.text.SimpleAttributeSet;
 
 import com.collabnote.client.Controller;
+import com.collabnote.crdt.CRDTItem;
 
 public class EditorDocument extends PlainDocument implements DocumentListener {
     private Controller controller;
@@ -22,9 +23,11 @@ public class EditorDocument extends PlainDocument implements DocumentListener {
         addDocumentListener(this);
     }
 
-    public void asyncInsert(int offset, String text) throws BadLocationException {
+    public void asyncInsert(CRDTItem item) throws BadLocationException {
         this.writeLock();
 
+        int offset = controller.getCRDT().findRealIndex(item);
+        String text = item.getValue();
         this.getContent().insertString(offset, text);
         DefaultDocumentEvent e = new EditorDocumentEvent(offset, text.length(), DocumentEvent.EventType.INSERT);
         this.insertUpdate(e, new SimpleAttributeSet());
@@ -35,9 +38,11 @@ public class EditorDocument extends PlainDocument implements DocumentListener {
         this.writeUnlock();
     }
 
-    public void asyncDelete(int offset, int length) throws BadLocationException {
+    public void asyncDelete(CRDTItem item) throws BadLocationException {
         this.writeLock();
 
+        int offset = controller.getCRDT().findRealIndex(item);
+        int length = item.getValue().length();
         DefaultDocumentEvent e = new EditorDocumentEvent(offset, length, DocumentEvent.EventType.REMOVE);
         this.removeUpdate(e);
         this.getContent().remove(offset, length);

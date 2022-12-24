@@ -67,19 +67,7 @@ public class EditorPanel extends JPanel {
         }
     }
 
-    public void insert(int offset, String text) {
-        try {
-            model.asyncInsert(offset, text);
-        } catch (BadLocationException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void delete(int offset, int length) {
-        try {
-            model.asyncDelete(offset, length);
-        } catch (BadLocationException e) {
-            System.out.println(e.getMessage());
-        }
+    public EditorDocument getModel() {
+        return model;
     }
 }

@@ -31,7 +31,7 @@ public class CRDT {
         return a.id.equals(agent, seq) && (!atEnd || a.value != null);
     }
 
-    int findRealIndex(CRDTItem needle) throws NoSuchElementException {
+    public int findRealIndex(CRDTItem needle) throws NoSuchElementException {
         int idx = 0;
         for (CRDTItem item : content) {
             if (needle == item)
@@ -193,7 +193,7 @@ public class CRDT {
             myItem.isDeleted = true;
             length--;
             if (fromWait)
-                crdtListener.onCRDTDelete(myItem, findRealIndex(myItem));
+                crdtListener.onCRDTDelete(myItem);
         }
     }
 
@@ -246,7 +246,7 @@ public class CRDT {
         if (!item.isDeleted) {
             length++;
             if (fromWait)
-                crdtListener.onCRDTInsert(item, findRealIndex(item));
+                crdtListener.onCRDTInsert(item);
         }
 
     }

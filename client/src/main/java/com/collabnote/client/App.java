@@ -16,6 +16,8 @@ import java.awt.EventQueue;
 import java.io.IOException;
 import java.util.UUID;
 
+import javax.swing.text.BadLocationException;
+
 public class App implements Controller, ClientSocketListener, CRDTListener {
     private String agent = UUID.randomUUID().toString();
     private MainFrame frame;
@@ -198,12 +200,23 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     }
 
     @Override
-    public void onCRDTInsert(CRDTItem item, int pos) {
-        frame.getEditorPanel().insert(pos, item.getValue());
+    public CRDT getCRDT() {
+        return this.currentDoc;
     }
 
     @Override
-    public void onCRDTDelete(CRDTItem item, int pos) {
-        frame.getEditorPanel().delete(pos, item.getValue().length());
+    public void onCRDTInsert(CRDTItem item) {
+        try {
+            frame.getEditorPanel().getModel().asyncInsert(item);
+        } catch (BadLocationException e) {
+        }
+    }
+
+    @Override
+    public void onCRDTDelete(CRDTItem item) {
+        try {
+            frame.getEditorPanel().getModel().asyncDelete(item);
+        } catch (BadLocationException e) {
+        }
     }
 }
