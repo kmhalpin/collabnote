@@ -8,6 +8,8 @@ plugins {
 
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
+
+    id 'com.palantir.docker'
 }
 
 jar {
@@ -16,9 +18,17 @@ jar {
     }
 }
 
-task runJar(type: Exec) {
+task jarRun(type: Exec) {
     dependsOn jar
     group = "Execution"
     description = "Run the output executable jar with ExecTask"
     commandLine "java", "-jar", jar.archiveFile.get()
+}
+
+docker {
+    dependsOn jar
+    name project.name
+    dockerfile file("$rootDir/buildSrc/Dockerfile")
+    files tasks.distTar.outputs, "${jar.archiveFile.get()}"
+    buildArgs([JAR_FILE: "${jar.archiveFileName.get()}"])
 }

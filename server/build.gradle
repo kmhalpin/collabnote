@@ -4,6 +4,7 @@
 
 plugins {
     id 'com.collabnote.java-application-conventions'
+    id 'com.palantir.docker-run'
 }
 
 dependencies {
@@ -14,4 +15,11 @@ dependencies {
 application {
     // Define the main class for the application.
     mainClass = 'com.collabnote.server.App'
+}
+
+dockerRun {
+    name 'collabnote-server'
+    image 'server'
+    ports '7768:7768'
+    daemonize true
 }

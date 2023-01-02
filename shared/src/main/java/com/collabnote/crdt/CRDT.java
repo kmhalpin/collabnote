@@ -230,7 +230,7 @@ public class CRDT {
                     scanning = true;
                     continue;
                 } else if (oright == right) {
-                    if (item.id.agent.compareTo(other.id.agent) > 0)
+                    if (item.id.agent.compareTo(other.id.agent) > 0) // compare site winner
                         break;
                     else {
                         scanning = false;
