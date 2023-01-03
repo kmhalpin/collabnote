@@ -11,6 +11,7 @@ public class CRDT {
     CRDTListener crdtListener;
     List<CRDTItem> content;
     int length;
+    // vector clock
     HashMap<String, Integer> version;
     ArrayList<CRDTItem> WaitListInsert;
     ArrayList<CRDTItem> WaitListDelete;

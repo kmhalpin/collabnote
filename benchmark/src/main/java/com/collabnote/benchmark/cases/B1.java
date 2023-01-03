@@ -6,7 +6,10 @@ import com.collabnote.benchmark.BenchmarkAbstractCRDT;
 import com.collabnote.benchmark.BenchmarkChange;
 import com.collabnote.benchmark.BenchmarkCheck;
 import com.collabnote.benchmark.BenchmarkTemplate;
+import com.collabnote.benchmark.BenchmarkStore;
 import com.collabnote.benchmark.CRDTFactory;
+import com.collabnote.benchmark.CRDTOperation;
+import com.collabnote.benchmark.CRDTOperation.Operation;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTListener;
 
@@ -42,28 +45,35 @@ public class B1 {
         }
 
         @Override
-        protected void run(BenchmarkCheck check, String[] inputData, BenchmarkChange... changeDocs) {
-            ArrayList<CRDTItem> operations = new ArrayList<>();
+        protected void run(BenchmarkCheck benchmarkCheck, String[] inputData, BenchmarkChange... changeDocs) {
+            ArrayList<CRDTOperation> operations = new ArrayList<>();
             BenchmarkAbstractCRDT doc1 = crdtFactory.create(new CRDTListener() {
                 @Override
                 public void onCRDTInsert(CRDTItem item) {
-                    operations.add(item);
+                    operations.add(new CRDTOperation(item, Operation.INSERT));
                 }
 
                 @Override
                 public void onCRDTDelete(CRDTItem item) {
-                    operations.add(item);
+                    operations.add(new CRDTOperation(item, Operation.DELETE));
                 }
             });
             BenchmarkAbstractCRDT doc2 = crdtFactory.create();
 
-            for (int i = 0; i < inputData.length; i++) {
-                changeDocs[0].run(doc1, i, inputData[i]);
+            BenchmarkStore.benchmarkTime(name + " (time)", new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < inputData.length; i++) {
+                        changeDocs[0].run(doc1, i, inputData[i]);
+                    }
+                }
+            });
+
+            for (CRDTOperation operation : operations) {
+                doc2.applyUpdate(operation);
             }
 
-            for (CRDTItem operation : operations) {
-                doc2.insertText(0, name);
-            }
+            benchmarkCheck.check(doc1, doc2);
         }
     }
 }
