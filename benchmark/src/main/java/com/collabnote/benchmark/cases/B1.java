@@ -15,9 +15,11 @@ import com.collabnote.crdt.CRDTListener;
 
 public class B1 {
     private CRDTFactory crdtFactory;
+    private BenchmarkStore benchmarkStore;
 
-    public B1(CRDTFactory crdtFactory) {
+    public B1(CRDTFactory crdtFactory, BenchmarkStore benchmarkStore) {
         this.crdtFactory = crdtFactory;
+        this.benchmarkStore = benchmarkStore;
     }
 
     public void runBenchmarks() {
@@ -60,7 +62,7 @@ public class B1 {
             });
             BenchmarkAbstractCRDT doc2 = crdtFactory.create();
 
-            BenchmarkStore.benchmarkTime(name + " (time)", new Runnable() {
+            benchmarkStore.benchmarkTime(crdtFactory.getName(), name + " (time)", new Runnable() {
                 @Override
                 public void run() {
                     for (int i = 0; i < inputData.length; i++) {
