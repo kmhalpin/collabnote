@@ -25,20 +25,25 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     private ClientSocket clientSocket;
     private String shareID;
 
-    public App() {
+    public App(boolean visible) {
         Controller controller = this;
 
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                frame = new MainFrame(currentDoc, controller);
-                frame.setVisible(true);
-            }
-        });
+        if (visible)
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    frame = new MainFrame(currentDoc, controller);
+                    frame.setVisible(visible);
+                }
+            });
+    }
+
+    public MainFrame getFrame() {
+        return frame;
     }
 
     public static void main(String[] args) {
-        new App();
+        new App(true);
     }
 
     @Override

@@ -21,3 +21,16 @@ jar {
         attributes "Main-Class": "com.collabnote.client.App"
     }
 }
+
+jmh {
+    includes = ['com\\.collabnote\\.client\\.ClientBenchmark.*']
+    fork = 1
+    profilers = ['gc',
+        'com.collabnote.client.profiler.MemoryUsageProfiler',
+        'com.collabnote.client.profiler.TotalMemoryProfiler']
+    failOnError = true
+    forceGC = true
+    humanOutputFile = project.file("${project.buildDir}/results/jmh/human.txt")
+    resultsFile = project.file("${project.buildDir}/results/jmh/results.txt")
+    // resultFormat = 'CSV'
+}
