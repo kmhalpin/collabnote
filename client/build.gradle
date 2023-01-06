@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
     implementation 'io.github.vincenzopalazzo:material-ui-swing:1.1.4'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation project(':shared')
 }
 
@@ -25,8 +26,7 @@ jar {
 jmh {
     includes = ['com\\.collabnote\\.client\\.ClientBenchmark.*']
     fork = 1
-    profilers = ['gc',
-        'com.collabnote.client.profiler.MemoryUsageProfiler',
+    profilers = ['com.collabnote.client.profiler.MemoryUsageProfiler',
         'com.collabnote.client.profiler.TotalMemoryProfiler']
     failOnError = true
     forceGC = true
