@@ -19,7 +19,7 @@ public class CRDT {
 
     public CRDT(CRDTListener crdtListener) {
         this.crdtListener = crdtListener;
-        content = Collections.synchronizedList(new ArrayList<>());
+        content = Collections.synchronizedList(new ArrayList<>(1024));
         length = 0;
         version = new HashMap<>();
         WaitListInsert = new ArrayList<>(0);

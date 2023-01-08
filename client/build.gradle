@@ -24,7 +24,6 @@ jar {
 }
 
 jmh {
-    includes = ['com\\.collabnote\\.client\\.ClientBenchmark.*']
     fork = 1
     profilers = ['com.collabnote.client.profiler.MemoryUsageProfiler',
         'com.collabnote.client.profiler.TotalMemoryProfiler']

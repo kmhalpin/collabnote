@@ -56,11 +56,14 @@ public class MemoryUsageProfiler implements InternalProfiler {
         return getCurrentlyUsedMemory();
     }
 
-    long getSettledUsedMemory() throws InterruptedException {
+    long getSettledUsedMemory() {
         long m;
         long m2 = getReallyUsedMemory();
         do {
-            Thread.sleep(567);
+            try {
+                Thread.sleep(567);
+            } catch (InterruptedException e) {
+            }
             m = m2;
             m2 = getReallyUsedMemory();
         } while (m2 < getReallyUsedMemory());

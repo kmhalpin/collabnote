@@ -1,6 +1,7 @@
 package com.collabnote.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +30,16 @@ class InputData {
         this.isRemove = isRemove;
         this.character = character;
     }
+
+    @Override
+    public String toString() {
+        return "{" + this.index + ", " + (this.isRemove ? "D" : "I") + ", " + this.character + "}";
+    }
 }
 
 public class ClientBenchmark {
-    static final int N = 500;
-    static final int warmUpN = 5;
+    static final int N = 6000;
+    static final int warmUpN = 1000;
 
     /**
      * Insert Benchmark State
@@ -42,6 +48,7 @@ public class ClientBenchmark {
     public static class InsertState extends DefaultState {
         @Override
         public void doSetup() {
+            this.rawData = RandomStringUtils.randomAscii(N + warmUpN);
             String[] dataArray = this.rawData.split("");
             for (int i = 0; i < N + warmUpN; i++) {
                 this.data.add(new InputData(i, false, dataArray[i]));
@@ -70,53 +77,13 @@ public class ClientBenchmark {
     }
 
     /**
-     * Insert Delete Benchmark State
-     */
-    @State(Scope.Benchmark)
-    public static class InsertDeleteState extends DefaultState {
-        @Override
-        public void doSetup() {
-            String[] dataArray = this.rawData.split("");
-            for (int i = 0; i < warmUpN; i++) {
-                this.data.add(new InputData(i, false, dataArray[i]));
-            }
-            for (int i = 0; i < warmUpN; i++) {
-                this.data.add(new InputData(i, true, null));
-            }
-            int inserted = 0;
-            for (int i = 0; i < N * 2; i++) {
-                if(Math.floor(i / 100) % 2 == 0){
-                    this.data.add(new InputData(i, false, dataArray[inserted]));
-                    inserted++;
-                } else {
-                    this.data.add(new InputData(i, true, null));
-                }
-            }
-        }
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.SingleShotTime)
-    @OutputTimeUnit(TimeUnit.MILLISECONDS)
-    @Measurement(batchSize = 1, iterations = N * 2)
-    @Warmup(iterations = warmUpN * 2)
-    public void insertDeleteCharacters(InsertDeleteState state) throws BadLocationException {
-        InputData data = state.data.get(state.i);
-        if (data.isRemove) {
-            state.app.deleteCRDT(0);
-        } else {
-            state.app.insertCRDT(0, data.character);
-        }
-        state.i += 1;
-    }
-
-    /**
      * Random Position Insert Benchmark State
      */
     @State(Scope.Benchmark)
-    public static class RandomDataState extends DefaultState {
+    public static class RandomInsertState extends DefaultState {
         @Override
         public void doSetup() {
+            this.rawData = RandomStringUtils.randomAscii(N + warmUpN);
             String[] dataArray = this.rawData.split("");
             for (int i = 0; i < N + warmUpN; i++) {
                 this.data.add(new InputData(ThreadLocalRandom.current().nextInt(0, i + 1),
@@ -131,7 +98,7 @@ public class ClientBenchmark {
     @OutputTimeUnit(TimeUnit.MILLISECONDS)
     @Measurement(batchSize = 1, iterations = N)
     @Warmup(iterations = warmUpN)
-    public void randomPositionInsertCharacters(RandomDataState state) throws BadLocationException {
+    public void randomPositionInsertCharacters(RandomInsertState state) throws BadLocationException {
         state.app.insertCRDT(state.data.get(state.i).index, state.data.get(state.i).character);
         state.i += 1;
     }
@@ -140,9 +107,10 @@ public class ClientBenchmark {
      * Random Position Insert and Delete Benchmark State
      */
     @State(Scope.Benchmark)
-    public static class RandomInsertDeleteDataState extends DefaultState {
+    public static class RandomInsertDeleteState extends DefaultState {
         @Override
         public void doSetup() {
+            this.rawData = RandomStringUtils.randomAscii(N + warmUpN);
             String[] dataArray = this.rawData.split("");
             int inserted = 0;
             for (int i = 0; i < N + warmUpN; i++) {
@@ -165,7 +133,7 @@ public class ClientBenchmark {
     @OutputTimeUnit(TimeUnit.MILLISECONDS)
     @Measurement(batchSize = 1, iterations = N)
     @Warmup(iterations = warmUpN)
-    public void randomPositionInsertDeleteCharacters(RandomInsertDeleteDataState state) throws BadLocationException {
+    public void randomPositionInsertDeleteCharacters(RandomInsertDeleteState state) throws BadLocationException {
         InputData input = state.data.get(state.i);
         if (input.isRemove) {
             state.app.deleteCRDT(input.index);
@@ -198,9 +166,8 @@ public class ClientBenchmark {
             this.i = 0;
             this.data = new ArrayList<>();
 
-            this.rawData = RandomStringUtils.randomAscii(N + warmUpN);
             doSetup();
-            System.out.println("data:\n" + rawData);
+            System.out.println("data:\n" + Arrays.toString(data.toArray()));
         }
     }
 
