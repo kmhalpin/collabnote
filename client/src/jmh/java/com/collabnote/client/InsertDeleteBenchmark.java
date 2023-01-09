@@ -25,9 +25,9 @@ public class InsertDeleteBenchmark {
      */
     @State(Scope.Benchmark)
     public static class InsertDeleteState extends DefaultState {
-        static final int N = 1000;
+        static final int N = 6000;
         static final int warmUpN = 1000;
-        static final int dataN = 1000; // = (N + warmUpN) / 2
+        static final int dataN = 3500; // = (N + warmUpN) / 2
 
         @Override
         public void doSetup() {

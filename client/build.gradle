@@ -24,8 +24,10 @@ jar {
 }
 
 jmh {
+    includes = ['com\\.collabnote\\.client\\.InsertDeleteBenchmark.*']
     fork = 1
-    profilers = ['com.collabnote.client.profiler.MemoryUsageProfiler',
+    profilers = ['gc',
+        'com.collabnote.client.profiler.MemoryUsageProfiler',
         'com.collabnote.client.profiler.TotalMemoryProfiler']
     failOnError = true
     forceGC = true
