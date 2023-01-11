@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class CRDT {
+public class CRDTMaster {
     CRDTListener crdtListener;
     List<CRDTItem> content;
     int length;
@@ -19,7 +19,7 @@ public class CRDT {
     ArrayList<CRDTItem> WaitListDeleteAck;
     ReentrantLock lock = new ReentrantLock();
 
-    public CRDT(CRDTListener crdtListener) {
+    public CRDTMaster(CRDTListener crdtListener) {
         this.crdtListener = crdtListener;
         content = Collections.synchronizedList(new ArrayList<>(1024));
         length = 0;
