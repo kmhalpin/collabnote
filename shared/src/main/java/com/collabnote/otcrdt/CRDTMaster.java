@@ -26,8 +26,6 @@ public class CRDTMaster {
         version = new HashMap<>();
         WaitListInsert = new ArrayList<>(0);
         WaitListDelete = new ArrayList<>(0);
-        WaitListInsertAck = new ArrayList<>(0);
-        WaitListDeleteAck = new ArrayList<>(0);
     }
 
     boolean foundItem(CRDTItem a, String agent, int seq, boolean atEnd) {
@@ -197,24 +195,61 @@ public class CRDTMaster {
     public void Delete(CRDTItem item, boolean fromWait) {
         int pos = findItem(item.id, -1);
         CRDTItem myItem = content.get(pos);
+        ArrayList<CRDTItem> ops = new ArrayList<>();
         if (!myItem.isDeleted) {
             myItem.isDeleted = true;
             length--;
+
+            checkDeletedLeftItem(ops, item, pos - 1);
+            checkDeletedRightItem(ops, item, pos + 1);
+
             if (fromWait)
                 crdtListener.onCRDTDelete(myItem);
         }
     }
 
-    public void ackDelete(CRDTItem item) {
-        int pos = findItem(item.id, -1);
-        content.remove(pos);
+    void checkDeletedLeftItem(ArrayList<CRDTItem> ops, CRDTItem item, int left) {
+        for (; left >= 0; left--) {
+            CRDTItem lItem = content.get(left);
+            if (!lItem.originRight.equals(item.id)) {
+                lItem.originRight = item.originLeft;
+                ops.add(lItem);
+            }
+        }
     }
 
-    public void change(CRDTItem item) {
-        int pos = findItem(item.id, -1);
-        CRDTItem myItem = content.get(pos);
-        myItem.originLeft = item.originLeft;
-        myItem.originRight = item.originRight;
+    void checkDeletedRightItem(ArrayList<CRDTItem> ops, CRDTItem item, int right) {
+        for (; right < content.size(); right++) {
+            CRDTItem rItem = content.get(right);
+            if (!rItem.originLeft.equals(item.id)) {
+                rItem.originLeft = item.originRight;
+                ops.add(rItem);
+            }
+        }
+    }
+
+    int checkLeftItem(CRDTItem item, int left) {
+        for (; left >= 0; left--) {
+            CRDTItem lItem = content.get(left);
+            if (!lItem.isDeleted) {
+                item.originLeft = lItem.id;
+                return left;
+            }
+        }
+        item.originLeft = null;
+        return left;
+    }
+
+    int checkRightItem(CRDTItem item, int right) {
+        for (; right < content.size(); right++) {
+            CRDTItem rItem = content.get(right);
+            if (!rItem.isDeleted) {
+                item.originRight = rItem.id;
+                return right;
+            }
+        }
+        item.originRight = null;
+        return right;
     }
 
     void integrate(CRDTItem item, int idx_hint, boolean fromWait) {
@@ -231,6 +266,14 @@ public class CRDTMaster {
         // System.out.println(left);
         int destIdx = left + 1;
         int right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
+
+        if (item.originLeft != null) {
+            left = checkLeftItem(item, left);
+        }
+        if (item.originRight != null) {
+            right = checkRightItem(item, right);
+        }
+
         boolean scanning = false;
         // System.out.println(right);
         for (int i = destIdx;; ++i) {
