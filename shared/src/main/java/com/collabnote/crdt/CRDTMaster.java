@@ -1,4 +1,4 @@
-package com.collabnote.otcrdt;
+package com.collabnote.crdt;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -168,7 +168,6 @@ public class CRDTMaster {
                 new CRDTID(agent, getNextSeq(agent)),
                 getItemIDAtPos(i - 1),
                 getItemIDAtPos(i),
-                false,
                 false);
         integrate(item, i, false);
         this.WaitListInsertAck.add(item);
@@ -195,11 +194,11 @@ public class CRDTMaster {
     public void Delete(CRDTItem item, boolean fromWait) {
         int pos = findItem(item.id, -1);
         CRDTItem myItem = content.get(pos);
-        ArrayList<CRDTItem> ops = new ArrayList<>();
         if (!myItem.isDeleted) {
             myItem.isDeleted = true;
             length--;
-
+            
+            ArrayList<CRDTItem> ops = new ArrayList<>();
             checkDeletedLeftItem(ops, item, pos - 1);
             checkDeletedRightItem(ops, item, pos + 1);
 
