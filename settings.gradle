@@ -8,4 +8,4 @@
  */
 
 rootProject.name = 'collabnote'
-include('client', 'server', 'shared')
+include('client', 'server', 'shared', 'benchmark')
