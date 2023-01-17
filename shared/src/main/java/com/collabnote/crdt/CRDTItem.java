@@ -18,6 +18,10 @@ public class CRDTItem implements Serializable {
         this.isDeleted = isDeleted;
     }
 
+    public boolean equals(CRDTItem obj) {
+        return obj.id.equals(this.id);
+    }
+
     public String getValue() {
         return value;
     }
@@ -47,6 +51,12 @@ public class CRDTItem implements Serializable {
 
     public boolean isPermaRemove() {
         return this.isDeleted && this.reference == -1;
+    }
+
+    @Override
+    public String toString() {
+        return "{" + this.value + ", " + this.id + ", " + this.originLeft + ", " + this.originRight + ", "
+                + this.isDeleted + ", " + this.reference + "}";
     }
 
 }

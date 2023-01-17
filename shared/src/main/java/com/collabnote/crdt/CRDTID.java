@@ -18,4 +18,9 @@ public class CRDTID implements Serializable {
     boolean equals(String agent, int seq) {
         return this != null && agent.equals(this.agent) && seq == this.seq;
     }
+
+    @Override
+    public String toString() {
+        return this.agent.substring(0, 2) + "-" + this.seq;
+    }
 }

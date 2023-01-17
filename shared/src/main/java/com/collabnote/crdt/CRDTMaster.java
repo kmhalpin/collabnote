@@ -229,7 +229,7 @@ public class CRDTMaster {
 
                 // set limit
                 if (!leItem.isRemovable()) {
-                    if (left == pos && left > 0 && (leItem = content.get(--left)).isRemovable()) {
+                    if (left == pos && left > 0 && content.get(left - 1).isRemovable()) {
                     } else {
                         lItem = leItem;
                         lItemIdx = left;
@@ -251,7 +251,7 @@ public class CRDTMaster {
                     continue;
 
                 if (!riItem.isRemovable()) {
-                    if (right == pos && right < content.size() - 1 && (riItem = content.get(++right)).isRemovable()) {
+                    if (right == pos && right < content.size() - 1 && content.get(right + 1).isRemovable()) {
                     } else {
                         rItem = riItem;
                         rItemIdx = right;
@@ -323,7 +323,7 @@ public class CRDTMaster {
                                 // if there are referencer to root
                                 if (outlItems.size() > 0 || outrItems.size() > 0) {
                                 } else {
-                                    rItem.originLeft = lItem.originRight;
+                                    rItem.originLeft = riItem.originRight;
                                     lItem.originRight = rItem.id;
                                 }
                             } else if (leItem.isRemovable()) {
@@ -377,15 +377,20 @@ public class CRDTMaster {
                 remove.get(i).permaRemove();
             }
 
-            if (fromWait)
-                crdtListener.onCRDTRemove((CRDTItem[]) remove.toArray(), (CRDTItem[]) ops.toArray());
+            for (int i = 0; i < content.size(); i++) {
+                System.out.print(content.get(i).toString() + ", ");
+            }
+            System.out.println();
+
+            if (fromWait && remove.size() > 0 || ops.size() > 0)
+                crdtListener.onCRDTRemove(remove.toArray(new CRDTItem[] {}), ops.toArray(new CRDTItem[] {}));
         }
     }
 
     Pair<Integer, CRDTItem> checkLeftItem(int leftpos) {
         for (; leftpos >= 0; leftpos--) {
             CRDTItem lItem = content.get(leftpos);
-            if (!lItem.isRemovable()) {
+            if (!lItem.isPermaRemove()) {
                 return new Pair<Integer, CRDTItem>(leftpos, lItem);
             }
         }
@@ -395,7 +400,7 @@ public class CRDTMaster {
     Pair<Integer, CRDTItem> checkRightItem(int rightpos) {
         for (; rightpos < content.size(); rightpos++) {
             CRDTItem rItem = content.get(rightpos);
-            if (!rItem.isRemovable()) {
+            if (!rItem.isPermaRemove()) {
                 return new Pair<Integer, CRDTItem>(rightpos, rItem);
             }
         }
@@ -469,10 +474,9 @@ public class CRDTMaster {
         content.add(destIdx, item);
         if (!item.isDeleted) {
             length++;
-            if (fromWait)
-                crdtListener.onCRDTInsert(item);
         }
-
+        if (fromWait)
+            crdtListener.onCRDTInsert(item);
     }
 
     public List<CRDTItem> returnCopy() {

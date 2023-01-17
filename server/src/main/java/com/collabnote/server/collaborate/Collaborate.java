@@ -33,7 +33,7 @@ public class Collaborate implements CRDTListener {
 
             @Override
             public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
-                doc.AckDelete(remove, change);
+                doc.ackDelete(remove, change);
             }
         });
     }
@@ -45,13 +45,13 @@ public class Collaborate implements CRDTListener {
     }
 
     public void delete(CRDTItem item) {
-        this.doc.addDeleteOperationToWaitList(item);
         synchronized (docMasterLock) {
             this.docMaster.addDeleteOperationToWaitList(item);
         }
     }
 
     public void insert(CRDTItem item) {
+        System.out.println(item.toString());
         synchronized (docMasterLock) {
             this.docMaster.addInsertOperationToWaitList(item);
         }

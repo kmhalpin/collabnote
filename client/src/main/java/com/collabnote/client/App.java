@@ -14,6 +14,8 @@ import com.collabnote.socket.Type;
 
 import java.awt.EventQueue;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import javax.swing.text.BadLocationException;
@@ -158,6 +160,12 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
             case INSERT:
                 currentDoc.addInsertOperationToWaitList(data.getCrdtItem());
                 break;
+            case ACKINSERT:
+                currentDoc.ackInsert(data.getCrdtItem());
+                break;
+            case ACKDELETE:
+                currentDoc.ackDelete(data.getRemoves(), data.getChanges());
+                break;
             case DONE:
                 break;
             case CONNECT:
@@ -227,7 +235,10 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
 
     @Override
     public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
-        // TODO Auto-generated method stub
-
+        List<CRDTItem> content = this.currentDoc.returnCopy();
+        for (int i = 0; i < content.size(); i++) {
+            System.out.print(content.get(i).toString() + ", ");
+        }
+        System.out.println();
     }
 }
