@@ -4,11 +4,19 @@ import java.io.Serializable;
 
 public class CRDTItem implements Serializable {
     String value;
-    CRDTID id;
-    CRDTID originLeft;
-    CRDTID originRight;
+    public CRDTID id;
+    public CRDTID originLeft;
+    public CRDTID originRight;
     boolean isDeleted;
     int reference = 0;
+
+    public CRDTItem(CRDTItem other) {
+        this.value = other.value;
+        this.id = other.id;
+        this.originLeft = other.originLeft;
+        this.originRight = other.originRight;
+        this.isDeleted = other.isDeleted;
+    }
 
     CRDTItem(String value, CRDTID id, CRDTID originLeft, CRDTID originRight, boolean isDeleted) {
         this.value = value;

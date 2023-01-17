@@ -234,7 +234,7 @@ public class CRDT {
         pointer.originRight = item.originRight;
     }
 
-    public void ackDelete(CRDTItem[] removes, CRDTItem[] changes) {
+    public void ackDelete(CRDTItem[] removes) {
         CRDTItem[] removed = new CRDTItem[removes.length];
         for (int i = 0; i < removes.length; i++) {
             if (isInDoc(removes[i].id)) {
@@ -252,39 +252,13 @@ public class CRDT {
             }
         }
 
-        CRDTItem[] changed = new CRDTItem[changes.length];
-        for (int i = 0; i < changes.length; i++) {
-            if (isInDoc(changes[i].id)) {
-                CRDTItem change = null;
-                try {
-                    change = findItemPointer(removes[i].id, -1);
-                    if (!change.isDeleted) {
-                        Delete(change, true);
-                    }
-                } catch (NoSuchElementException e) {
-                }
-
-                changed[i] = change;
-            } else {
-                return;
-            }
-        }
-
-        CRDTItem change;
-        for (int i = 0; i < changed.length; i++) {
-            if ((change = changed[i]) != null) {
-                change.originLeft = changes[i].originLeft;
-                change.originRight = changes[i].originRight;
-            }
-        }
-
         CRDTItem remove;
         for (int i = 0; i < removed.length; i++) {
             if ((remove = removed[i]) != null)
                 content.remove(remove);
         }
 
-        crdtListener.onCRDTRemove(removes, changes);
+        crdtListener.onCRDTRemove(removes);
     }
 
     void integrate(CRDTItem item, int idx_hint, boolean fromWait) {

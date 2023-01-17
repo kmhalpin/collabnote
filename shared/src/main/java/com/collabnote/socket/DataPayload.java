@@ -12,7 +12,6 @@ public class DataPayload implements Serializable {
     private int caretIndex;
 
     private CRDTItem[] removes;
-    private CRDTItem[] changes;
 
     public static DataPayload insertPayload(String shareID, CRDTItem crdtItem) {
         return new DataPayload(Type.INSERT, shareID, crdtItem, 0);
@@ -26,10 +25,9 @@ public class DataPayload implements Serializable {
         return new DataPayload(Type.CARET, shareID, null, caretIndex);
     }
 
-    public static DataPayload ackDeletePayload(String shareID, CRDTItem[] removes, CRDTItem[] changes) {
+    public static DataPayload ackDeletePayload(String shareID, CRDTItem[] removes) {
         DataPayload data = new DataPayload(Type.ACKDELETE, shareID, null, 0);
         data.setRemoves(removes);
-        data.setChanges(changes);
         return data;
     }
 
@@ -74,13 +72,5 @@ public class DataPayload implements Serializable {
 
     private void setRemoves(CRDTItem[] removes) {
         this.removes = removes;
-    }
-
-    public CRDTItem[] getChanges() {
-        return changes;
-    }
-
-    private void setChanges(CRDTItem[] changes) {
-        this.changes = changes;
     }
 }

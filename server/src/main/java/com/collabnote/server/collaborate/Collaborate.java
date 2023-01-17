@@ -6,8 +6,8 @@ import java.util.List;
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTListener;
-import com.collabnote.crdt.CRDTMaster;
-import com.collabnote.crdt.CRDTMasterListener;
+import com.collabnote.crdt.CRDTGC;
+import com.collabnote.crdt.CRDTGCListener;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
 
@@ -15,7 +15,7 @@ public class Collaborate implements CRDTListener {
     private String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
-    private CRDTMaster docMaster;
+    private CRDTGC docMaster;
     private Object docMasterLock;
     private CRDT doc;
 
@@ -25,15 +25,15 @@ public class Collaborate implements CRDTListener {
         this.clients = new ArrayList<>();
         this.doc = new CRDT(this);
         this.docMasterLock = new Object();
-        this.docMaster = new CRDTMaster(new CRDTMasterListener() {
+        this.docMaster = new CRDTGC(new CRDTGCListener() {
             @Override
             public void onCRDTInsert(CRDTItem item) {
                 doc.addInsertOperationToWaitList(item);
             }
 
             @Override
-            public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
-                doc.ackDelete(remove, change);
+            public void onCRDTRemove(CRDTItem[] remove) {
+                doc.ackDelete(remove);
             }
         });
     }
@@ -73,8 +73,8 @@ public class Collaborate implements CRDTListener {
     }
 
     @Override
-    public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
-        broadcast(DataPayload.ackDeletePayload(shareID, remove, change));
+    public void onCRDTRemove(CRDTItem[] remove) {
+        broadcast(DataPayload.ackDeletePayload(shareID, remove));
     }
 
     public boolean isReady() {
