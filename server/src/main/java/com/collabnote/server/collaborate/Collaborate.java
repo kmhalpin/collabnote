@@ -6,14 +6,17 @@ import java.util.List;
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTListener;
+import com.collabnote.crdt.CRDTMaster;
+import com.collabnote.crdt.CRDTMasterListener;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
-import com.collabnote.socket.Type;
 
 public class Collaborate implements CRDTListener {
     private String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
+    private CRDTMaster docMaster;
+    private Object docMasterLock;
     private CRDT doc;
 
     public Collaborate(String shareID) {
@@ -21,6 +24,18 @@ public class Collaborate implements CRDTListener {
         this.isReady = false;
         this.clients = new ArrayList<>();
         this.doc = new CRDT(this);
+        this.docMasterLock = new Object();
+        this.docMaster = new CRDTMaster(new CRDTMasterListener() {
+            @Override
+            public void onCRDTInsert(CRDTItem item) {
+                doc.addInsertOperationToWaitList(item);
+            }
+
+            @Override
+            public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
+                doc.AckDelete(remove, change);
+            }
+        });
     }
 
     public void broadcast(DataPayload data) {
@@ -31,10 +46,15 @@ public class Collaborate implements CRDTListener {
 
     public void delete(CRDTItem item) {
         this.doc.addDeleteOperationToWaitList(item);
+        synchronized (docMasterLock) {
+            this.docMaster.addDeleteOperationToWaitList(item);
+        }
     }
 
     public void insert(CRDTItem item) {
-        this.doc.addInsertOperationToWaitList(item);
+        synchronized (docMasterLock) {
+            this.docMaster.addInsertOperationToWaitList(item);
+        }
     }
 
     public List<CRDTItem> getCRDTItems() {
@@ -43,14 +63,18 @@ public class Collaborate implements CRDTListener {
 
     @Override
     public void onCRDTInsert(CRDTItem item) {
-        // TODO Auto-generated method stub
-
+        broadcast(DataPayload.ackInsertPayload(shareID, item));
     }
 
     @Override
     public void onCRDTDelete(CRDTItem item) {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public void onCRDTRemove(CRDTItem[] remove, CRDTItem[] change) {
+        broadcast(DataPayload.ackDeletePayload(shareID, remove, change));
     }
 
     public boolean isReady() {
@@ -66,7 +90,7 @@ public class Collaborate implements CRDTListener {
     }
 
     public boolean removeClient(ClientHandler client) {
-        DataPayload payload = new DataPayload(Type.CARET, this.shareID, null, -1);
+        DataPayload payload = DataPayload.caretPayload(this.shareID, -1);
         payload.setAgent(client.getAgent());
         this.broadcast(payload);
         return this.clients.remove(client);

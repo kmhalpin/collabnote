@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.math3.util.Pair;
+
 public class CRDTMaster {
-    CRDTListener crdtListener;
+    CRDTMasterListener crdtListener;
     List<CRDTItem> content;
     int length;
     // vector clock
@@ -19,7 +21,7 @@ public class CRDTMaster {
     ArrayList<CRDTItem> WaitListDeleteAck;
     ReentrantLock lock = new ReentrantLock();
 
-    public CRDTMaster(CRDTListener crdtListener) {
+    public CRDTMaster(CRDTMasterListener crdtListener) {
         this.crdtListener = crdtListener;
         content = Collections.synchronizedList(new ArrayList<>(1024));
         length = 0;
@@ -162,30 +164,30 @@ public class CRDTMaster {
             WaitListDelete.add(item);
     }
 
-    public CRDTItem localInsert(String agent, int pos, String value) {
-        int i = findItemAtPos(pos);
-        CRDTItem item = new CRDTItem(value,
-                new CRDTID(agent, getNextSeq(agent)),
-                getItemIDAtPos(i - 1),
-                getItemIDAtPos(i),
-                false);
-        integrate(item, i, false);
-        this.WaitListInsertAck.add(item);
-        return item;
-    }
+    // public CRDTItem localInsert(String agent, int pos, String value) {
+    // int i = findItemAtPos(pos);
+    // CRDTItem item = new CRDTItem(value,
+    // new CRDTID(agent, getNextSeq(agent)),
+    // getItemIDAtPos(i - 1),
+    // getItemIDAtPos(i),
+    // false);
+    // integrate(item, i, false);
+    // this.WaitListInsertAck.add(item);
+    // return item;
+    // }
 
-    public CRDTItem localDelete(String agent, int pos) {
-        int i = findItemAtPos(pos);
-        if (i >= content.size())
-            return null;
-        CRDTItem item = content.get(i);
-        if (!item.isDeleted) {
-            item.isDeleted = true;
-            length--;
-            this.WaitListDeleteAck.add(item);
-        }
-        return item;
-    }
+    // public CRDTItem localDelete(String agent, int pos) {
+    // int i = findItemAtPos(pos);
+    // if (i >= content.size())
+    // return null;
+    // CRDTItem item = content.get(i);
+    // if (!item.isDeleted) {
+    // item.isDeleted = true;
+    // length--;
+    // this.WaitListDeleteAck.add(item);
+    // }
+    // return item;
+    // }
 
     public void Insert(CRDTItem item, boolean fromWait) {
         integrate(item, -1, fromWait);
@@ -197,58 +199,207 @@ public class CRDTMaster {
         if (!myItem.isDeleted) {
             myItem.isDeleted = true;
             length--;
-            
+
+            // decrease reference
+            if (myItem.originLeft != null) {
+                int left = findItem(myItem.originLeft);
+                content.get(left).decreaseReference();
+            }
+            if (myItem.originRight != null) {
+                int right = findItem(myItem.originRight);
+                content.get(right).decreaseReference();
+            }
+
+            // remove removables
+            ArrayList<CRDTItem> remove = new ArrayList<>(), removeLeft = new ArrayList<>(),
+                    removeRight = new ArrayList<>();
+
+            if (myItem.isRemovable()) {
+                removeLeft.add(myItem);
+            }
+
+            // find active tomb or non removed item used as limiter and remove removables
+            CRDTItem lItem = null, rItem = null;
+            int lItemIdx = 0, rItemIdx = 0;
+            for (int left = pos; left >= 0; left--) {
+                CRDTItem leItem = content.get(left);
+                // skip removed item
+                if (leItem.isPermaRemove())
+                    continue;
+
+                // set limit
+                if (!leItem.isRemovable()) {
+                    if (left == pos && left > 0 && (leItem = content.get(--left)).isRemovable()) {
+                    } else {
+                        lItem = leItem;
+                        lItemIdx = left;
+                        break;
+                    }
+                }
+
+                // remove removable item
+                if (left != pos) {
+                    removeLeft.add(leItem);
+                }
+            }
+            Collections.reverse(removeLeft);
+            remove.addAll(removeLeft);
+
+            for (int right = pos; right < content.size(); right++) {
+                CRDTItem riItem = content.get(right);
+                if (riItem.isPermaRemove())
+                    continue;
+
+                if (!riItem.isRemovable()) {
+                    if (right == pos && right < content.size() - 1 && (riItem = content.get(++right)).isRemovable()) {
+                    } else {
+                        rItem = riItem;
+                        rItemIdx = right;
+                        break;
+                    }
+                }
+
+                if (right != pos) {
+                    removeRight.add(riItem);
+                }
+            }
+            remove.addAll(removeRight);
+
+            // find active tomb outside limit that referencing to removed and make sure its
+            // not refrenced by limit
+            ArrayList<CRDTItem> outlItems = new ArrayList<>(), outrItems = new ArrayList<>();
+            if (lItem != null)
+                for (int left = lItemIdx - 1; left >= 0; left--) {
+                    CRDTItem leItem = content.get(left);
+                    // skip removed item
+                    if (leItem.isPermaRemove())
+                        continue;
+
+                    // find active tomb outside limit that referencing to removed
+                    if (leItem.isActiveTombstone() && leItem.originRight != null)
+                        for (int i = 0; i < remove.size(); i++) {
+                            CRDTItem temp = remove.get(i);
+                            if (leItem.originRight.equals(temp.id)) {
+                                // change limit if limit refrencing removed item refrencer (root)
+                                if (leItem.id.equals(lItem.originLeft)) {
+                                    lItemIdx = findItem(lItem.originRight, lItemIdx + 1);
+                                    lItem = content.get(lItemIdx);
+                                    remove.remove(lItem);
+                                } else
+                                    outlItems.add(leItem);
+                            }
+                        }
+                }
+            if (rItem != null)
+                for (int right = rItemIdx + 1; right < content.size(); right++) {
+                    CRDTItem riItem = content.get(right);
+                    if (riItem.isPermaRemove())
+                        continue;
+
+                    if (riItem.isActiveTombstone() && riItem.originLeft != null)
+                        for (int i = 0; i < remove.size(); i++) {
+                            CRDTItem temp = remove.get(i);
+                            if (riItem.originLeft.equals(temp.id)) {
+                                if (riItem.id.equals(rItem.originRight)) {
+                                    rItemIdx = findItem(rItem.originLeft, rItemIdx - 1);
+                                    rItem = content.get(rItemIdx);
+                                    remove.remove(rItem);
+                                } else
+                                    outrItems.add(riItem);
+                            }
+                        }
+                }
+
+            // change origin
             ArrayList<CRDTItem> ops = new ArrayList<>();
-            checkDeletedLeftItem(ops, item, pos - 1);
-            checkDeletedRightItem(ops, item, pos + 1);
+            if (lItem != rItem)
+                if (lItem != null && rItem != null) {
+                    if (lItem.isDeleted && rItem.isDeleted) {
+                        if (lItem.originRight != null && rItem.originLeft != null) {
+                            CRDTItem leItem = content.get(findItem(lItem.originRight, lItemIdx + 1));
+                            CRDTItem riItem = content.get(findItem(rItem.originLeft, rItemIdx - 1));
+                            // remove root
+                            if (leItem.isRemovable() && riItem.isRemovable()) {
+                                // if there are referencer to root
+                                if (outlItems.size() > 0 || outrItems.size() > 0) {
+                                } else {
+                                    rItem.originLeft = lItem.originRight;
+                                    lItem.originRight = rItem.id;
+                                }
+                            } else if (leItem.isRemovable()) {
+                                lItem.originRight = rItem.id;
+                            } else if (riItem.isRemovable()) {
+                                rItem.originLeft = lItem.id;
+                            }
+                        }
+                    } else if (lItem.isDeleted && !rItem.isDeleted) {
+                        if (rItem.originRight != null) {
+                            CRDTItem leItem = content.get(findItem(lItem.originRight));
+                            if (leItem.isRemovable()) {
+                                outlItems.add(lItem);
+                                for (int i = 0; i < outlItems.size(); i++) {
+                                    outlItems.get(i).originRight = rItem.id;
+                                    ops.add(outlItems.get(i));
+                                }
+                            }
+                        }
+                    } else if (!lItem.isDeleted && rItem.isDeleted) {
+                        if (rItem.originLeft != null) {
+                            CRDTItem riItem = content.get(findItem(rItem.originLeft));
+                            if (riItem.isRemovable()) {
+                                outrItems.add(rItem);
+                                for (int i = 0; i < outrItems.size(); i++) {
+                                    outrItems.get(i).originLeft = lItem.id;
+                                    ops.add(outrItems.get(i));
+                                }
+                            }
+                        }
+                    } else if (!lItem.isDeleted && !rItem.isDeleted) {
+                    } else {
+                        // unexpected removable item
+                    }
+                } else if (lItem != null && lItem.isDeleted && rItem == null) {
+                    outlItems.add(lItem);
+                    for (int i = 0; i < outlItems.size(); i++) {
+                        outlItems.get(i).originRight = null;
+                        ops.add(outlItems.get(i));
+                    }
+                } else if (lItem == null && rItem != null && rItem.isDeleted) {
+                    outrItems.add(rItem);
+                    for (int i = 0; i < outrItems.size(); i++) {
+                        outrItems.get(i).originLeft = null;
+                        ops.add(outrItems.get(i));
+                    }
+                }
+
+            // perma remove
+            for (int i = 0; i < remove.size(); i++) {
+                remove.get(i).permaRemove();
+            }
 
             if (fromWait)
-                crdtListener.onCRDTDelete(myItem);
+                crdtListener.onCRDTRemove((CRDTItem[]) remove.toArray(), (CRDTItem[]) ops.toArray());
         }
     }
 
-    void checkDeletedLeftItem(ArrayList<CRDTItem> ops, CRDTItem item, int left) {
-        for (; left >= 0; left--) {
-            CRDTItem lItem = content.get(left);
-            if (!lItem.originRight.equals(item.id)) {
-                lItem.originRight = item.originLeft;
-                ops.add(lItem);
+    Pair<Integer, CRDTItem> checkLeftItem(int leftpos) {
+        for (; leftpos >= 0; leftpos--) {
+            CRDTItem lItem = content.get(leftpos);
+            if (!lItem.isRemovable()) {
+                return new Pair<Integer, CRDTItem>(leftpos, lItem);
             }
         }
+        return new Pair<Integer, CRDTItem>(leftpos, null);
     }
 
-    void checkDeletedRightItem(ArrayList<CRDTItem> ops, CRDTItem item, int right) {
-        for (; right < content.size(); right++) {
-            CRDTItem rItem = content.get(right);
-            if (!rItem.originLeft.equals(item.id)) {
-                rItem.originLeft = item.originRight;
-                ops.add(rItem);
+    Pair<Integer, CRDTItem> checkRightItem(int rightpos) {
+        for (; rightpos < content.size(); rightpos++) {
+            CRDTItem rItem = content.get(rightpos);
+            if (!rItem.isRemovable()) {
+                return new Pair<Integer, CRDTItem>(rightpos, rItem);
             }
         }
-    }
-
-    int checkLeftItem(CRDTItem item, int left) {
-        for (; left >= 0; left--) {
-            CRDTItem lItem = content.get(left);
-            if (!lItem.isDeleted) {
-                item.originLeft = lItem.id;
-                return left;
-            }
-        }
-        item.originLeft = null;
-        return left;
-    }
-
-    int checkRightItem(CRDTItem item, int right) {
-        for (; right < content.size(); right++) {
-            CRDTItem rItem = content.get(right);
-            if (!rItem.isDeleted) {
-                item.originRight = rItem.id;
-                return right;
-            }
-        }
-        item.originRight = null;
-        return right;
+        return new Pair<Integer, CRDTItem>(rightpos, null);
     }
 
     void integrate(CRDTItem item, int idx_hint, boolean fromWait) {
@@ -266,11 +417,22 @@ public class CRDTMaster {
         int destIdx = left + 1;
         int right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
 
+        // shift origin if tombstone and increase reference
         if (item.originLeft != null) {
-            left = checkLeftItem(item, left);
+            Pair<Integer, CRDTItem> itemLeft = checkLeftItem(left);
+            left = itemLeft.getFirst();
+            if (itemLeft.getSecond() != null) {
+                item.originLeft = itemLeft.getSecond().id;
+                itemLeft.getSecond().increaseReference();
+            }
         }
         if (item.originRight != null) {
-            right = checkRightItem(item, right);
+            Pair<Integer, CRDTItem> itemRight = checkRightItem(right);
+            right = itemRight.getFirst();
+            if (itemRight.getSecond() != null) {
+                item.originRight = itemRight.getSecond().id;
+                itemRight.getSecond().increaseReference();
+            }
         }
 
         boolean scanning = false;

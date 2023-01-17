@@ -198,6 +198,59 @@ public class CRDT {
         }
     }
 
+    public void AckDelete(CRDTItem[] removes, CRDTItem[] changes) {
+        CRDTItem[] removed = new CRDTItem[removes.length];
+        for (int i = 0; i < removes.length; i++) {
+            if (isInDoc(removes[i].id)) {
+                CRDTItem remove = null;
+                try {
+                    remove = content.get(findItem(removes[i].id, -1));
+                    if (!remove.isDeleted) {
+                        Delete(remove, true);
+                    }
+                } catch (NoSuchElementException e) {
+                }
+                removed[i] = remove;
+            } else {
+                return;
+            }
+        }
+
+        CRDTItem[] changed = new CRDTItem[changes.length];
+        for (int i = 0; i < changes.length; i++) {
+            if (isInDoc(changes[i].id)) {
+                CRDTItem change = null;
+                try {
+                    change = content.get(findItem(changes[i].id, -1));
+                    if (!change.isDeleted) {
+                        Delete(change, true);
+                    }
+                } catch (NoSuchElementException e) {
+                }
+
+                changed[i] = change;
+            } else {
+                return;
+            }
+        }
+
+        CRDTItem change;
+        for (int i = 0; i < changed.length; i++) {
+            if ((change = changed[i]) != null) {
+                change.originLeft = changes[i].originLeft;
+                change.originRight = changes[i].originRight;
+            }
+        }
+
+        CRDTItem remove;
+        for (int i = 0; i < removed.length; i++) {
+            if ((remove = removed[i]) != null)
+                content.remove(remove);
+        }
+
+        crdtListener.onCRDTRemove(removes, changes);
+    }
+
     void integrate(CRDTItem item, int idx_hint, boolean fromWait) {
         int shouldProcessSeq = getNextSeq(item.id.agent);
         if (shouldProcessSeq != item.id.seq) {
