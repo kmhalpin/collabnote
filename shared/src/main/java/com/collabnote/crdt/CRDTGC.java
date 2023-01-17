@@ -266,11 +266,6 @@ public class CRDTGC {
                 remove.get(i).permaRemove();
             }
 
-            for (int i = 0; i < content.size(); i++) {
-                System.out.print(content.get(i).toString() + ", ");
-            }
-            System.out.println();
-
             if (fromWait && remove.size() > 0)
                 crdtListener.onCRDTRemove(remove.toArray(new CRDTItem[] {}));
         }

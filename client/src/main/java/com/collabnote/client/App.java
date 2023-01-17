@@ -14,7 +14,6 @@ import com.collabnote.socket.Type;
 
 import java.awt.EventQueue;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 import javax.swing.text.BadLocationException;
@@ -234,15 +233,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
 
     @Override
     public void onCRDTRemove(CRDTItem[] remove) {
-        List<CRDTItem> content = this.currentDoc.returnCopy();
-        for (int i = 0; i < content.size(); i++) {
-            CRDTItem item = content.get(i);
-            for (int j = 0; j < remove.length; j++) {
-                if (remove[j].id.equals(item.originRight) || remove[j].id.equals(item.originLeft)) {
-                    System.out.println("FOUND ITEM STILL REF " + item.toString());
-                }
-            }
-        }
-        System.out.println();
+        // TODO Auto-generated method stub
+        
     }
 }
