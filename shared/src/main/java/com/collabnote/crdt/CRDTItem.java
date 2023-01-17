@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 public class CRDTItem implements Serializable {
     String value;
-    public CRDTID id;
-    public CRDTID originLeft;
-    public CRDTID originRight;
+    CRDTID id;
+    CRDTID originLeft;
+    CRDTID originRight;
     boolean isDeleted;
     int reference = 0;
 

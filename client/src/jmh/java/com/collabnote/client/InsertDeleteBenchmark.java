@@ -31,6 +31,7 @@ public class InsertDeleteBenchmark {
 
         @Override
         public void doSetup() {
+            this.app.shareNote("127.0.0.1");
             this.rawData = RandomStringUtils.randomAscii(dataN);
             String[] dataArray = this.rawData.split("");
 

@@ -51,7 +51,6 @@ public class Collaborate implements CRDTListener {
     }
 
     public void insert(CRDTItem item) {
-        System.out.println(item.toString());
         synchronized (docMasterLock) {
             this.docMaster.addInsertOperationToWaitList(item);
         }
@@ -63,7 +62,7 @@ public class Collaborate implements CRDTListener {
 
     @Override
     public void onCRDTInsert(CRDTItem item) {
-        broadcast(DataPayload.ackInsertPayload(shareID, item));
+        broadcast(DataPayload.ackInsertPayload(shareID, new CRDTItem(item)));
     }
 
     @Override
