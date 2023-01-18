@@ -268,15 +268,18 @@ public class CRDT {
                     String.format("Should see operation seq #%v, but saw #%v instead", shouldProcessSeq, item.id.seq));
             return;
         }
-        // System.out.println(item.id.agent);
+        int left, destIdx, right;
+        try {
+            left = findItem(item.originLeft, idx_hint - 1);
+            destIdx = left + 1;
+            right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
+        } catch (NoSuchElementException e) {
+            return;
+        }
+
         version.put(item.id.agent, item.id.seq);
-        // if(item.originLeft != null)System.out.println(item.originLeft.agent);
-        int left = findItem(item.originLeft, idx_hint - 1);
-        // System.out.println(left);
-        int destIdx = left + 1;
-        int right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
         boolean scanning = false;
-        // System.out.println(right);
+
         for (int i = destIdx;; ++i) {
             if (!scanning)
                 destIdx = i;

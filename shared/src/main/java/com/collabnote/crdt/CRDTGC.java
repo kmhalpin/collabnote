@@ -221,12 +221,9 @@ public class CRDTGC {
             if (myItem.isRemovable()) {
                 for (int left = pos - 1; left >= 0; left--) {
                     CRDTItem leItem = content.get(left);
-                    // skip removed item
-                    if (leItem.isPermaRemove())
-                        continue;
 
                     // remove removable item
-                    if (leItem.isRemovable()) {
+                    if (!leItem.isPermaRemove() && leItem.isRemovable()) {
                         remove.add(leItem);
 
                         // decrease reference
@@ -238,15 +235,14 @@ public class CRDTGC {
                             int oright = findItem(leItem.originRight);
                             content.get(oright).decreaseReference();
                         }
+                        break;
                     }
                 }
 
                 for (int right = pos + 1; right < content.size(); right++) {
                     CRDTItem riItem = content.get(right);
-                    if (riItem.isPermaRemove())
-                        continue;
 
-                    if (riItem.isRemovable()) {
+                    if (!riItem.isPermaRemove() && riItem.isRemovable()) {
                         remove.add(riItem);
 
                         if (riItem.originLeft != null) {
@@ -257,6 +253,7 @@ public class CRDTGC {
                             int oright = findItem(riItem.originRight);
                             content.get(oright).decreaseReference();
                         }
+                        break;
                     }
                 }
             }
@@ -360,13 +357,13 @@ public class CRDTGC {
             length++;
         }
         if (fromWait)
-            crdtListener.onCRDTInsert(item);
+            crdtListener.onCRDTInsert(new CRDTItem(item));
     }
 
     public List<CRDTItem> returnCopy() {
         try {
             lock.lock();
-            return content;
+            return content.stream().filter(d -> !d.isPermaRemove()).toList();
         } finally {
             lock.unlock();
         }
