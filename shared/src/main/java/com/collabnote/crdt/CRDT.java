@@ -100,6 +100,8 @@ public class CRDT {
     int findItemAtPos(int pos, boolean stick_end) throws NoSuchElementException {
         int cntValid = 0;
         int i = 0;
+        if (pos >= content.size())
+            return content.size();
         for (i = 0; i < content.size(); ++i) {
             CRDTItem item = content.get(i);
             if (stick_end && pos == cntValid)
