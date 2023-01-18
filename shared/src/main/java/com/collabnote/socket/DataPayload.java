@@ -11,6 +11,30 @@ public class DataPayload implements Serializable {
     private CRDTItem crdtItem;
     private int caretIndex;
 
+    private CRDTItem[] removes;
+
+    public static DataPayload insertPayload(String shareID, CRDTItem crdtItem) {
+        return new DataPayload(Type.INSERT, shareID, crdtItem, 0);
+    }
+
+    public static DataPayload deletePayload(String shareID, CRDTItem crdtItem) {
+        return new DataPayload(Type.DELETE, shareID, crdtItem, 0);
+    }
+
+    public static DataPayload caretPayload(String shareID, int caretIndex) {
+        return new DataPayload(Type.CARET, shareID, null, caretIndex);
+    }
+
+    public static DataPayload ackDeletePayload(String shareID, CRDTItem[] removes) {
+        DataPayload data = new DataPayload(Type.ACKDELETE, shareID, null, 0);
+        data.setRemoves(removes);
+        return data;
+    }
+
+    public static DataPayload ackInsertPayload(String shareID, CRDTItem crdtItem) {
+        return new DataPayload(Type.ACKINSERT, shareID, crdtItem, 0);
+    }
+
     public DataPayload(Type type, String shareID, CRDTItem crdtItem, int caretIndex) {
         this.type = type;
         this.shareID = shareID;
@@ -40,5 +64,13 @@ public class DataPayload implements Serializable {
 
     public int getCaretIndex() {
         return caretIndex;
+    }
+
+    public CRDTItem[] getRemoves() {
+        return removes;
+    }
+
+    private void setRemoves(CRDTItem[] removes) {
+        this.removes = removes;
     }
 }

@@ -107,7 +107,7 @@ public class ClientHandler extends Thread {
                                     this.collaborate.addClient(this);
 
                                     for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
-                                        sendData(new DataPayload(Type.INSERT, data.getShareID(), crdtItem, 0));
+                                        sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
                                     }
                                     sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0));
                                 } else {

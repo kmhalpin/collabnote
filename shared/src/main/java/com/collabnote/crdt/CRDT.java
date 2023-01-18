@@ -11,6 +11,7 @@ public class CRDT {
     CRDTListener crdtListener;
     List<CRDTItem> content;
     int length;
+    // vector clock
     HashMap<String, Integer> version;
     ArrayList<CRDTItem> WaitListInsert;
     ArrayList<CRDTItem> WaitListDelete;
@@ -18,7 +19,7 @@ public class CRDT {
 
     public CRDT(CRDTListener crdtListener) {
         this.crdtListener = crdtListener;
-        content = Collections.synchronizedList(new ArrayList<>());
+        content = Collections.synchronizedList(new ArrayList<>(1024));
         length = 0;
         version = new HashMap<>();
         WaitListInsert = new ArrayList<>(0);
@@ -31,6 +32,7 @@ public class CRDT {
         return a.id.equals(agent, seq) && (!atEnd || a.value != null);
     }
 
+    // only use crdtitem from local
     public int findRealIndex(CRDTItem needle) throws NoSuchElementException {
         int idx = 0;
         for (CRDTItem item : content) {
@@ -40,6 +42,33 @@ public class CRDT {
                 idx++;
         }
         throw new NoSuchElementException();
+    }
+
+    CRDTItem findItemPointer(CRDTID needle, boolean atEnd, int idx_hint) throws NoSuchElementException {
+        if (needle == null)
+            return null;
+        String agent = needle.agent;
+        int seq = needle.seq;
+        if (idx_hint >= 0 && idx_hint < content.size()) {
+            CRDTItem hintItem = content.get(idx_hint);
+            if (foundItem(hintItem, agent, seq, atEnd)) {
+                return hintItem;
+            }
+        }
+        for (int i = 0; i < content.size(); ++i) {
+            CRDTItem item = content.get(i);
+            if (foundItem(item, agent, seq, atEnd))
+                return item;
+        }
+        throw new NoSuchElementException();
+    }
+
+    CRDTItem findItemPointer(CRDTID needle, int idx_hint) {
+        return findItemPointer(needle, false, idx_hint);
+    }
+
+    CRDTItem findItemPointer(CRDTID needle) {
+        return findItemPointer(needle, false, -1);
     }
 
     int findItem(CRDTID needle, boolean atEnd, int idx_hint) throws NoSuchElementException {
@@ -187,14 +216,49 @@ public class CRDT {
     }
 
     public void Delete(CRDTItem item, boolean fromWait) {
-        int pos = findItem(item.id, -1);
-        CRDTItem myItem = content.get(pos);
+        CRDTItem myItem = findItemPointer(item.id, -1);
         if (!myItem.isDeleted) {
             myItem.isDeleted = true;
             length--;
             if (fromWait)
                 crdtListener.onCRDTDelete(myItem);
         }
+    }
+
+    public void ackInsert(CRDTItem item) {
+        if (!isInDoc(item.id))
+            addInsertOperationToWaitList(item);
+
+        CRDTItem pointer = findItemPointer(item.id);
+        pointer.originLeft = item.originLeft;
+        pointer.originRight = item.originRight;
+    }
+
+    public void ackDelete(CRDTItem[] removes) {
+        CRDTItem[] removed = new CRDTItem[removes.length];
+        for (int i = 0; i < removes.length; i++) {
+            if (isInDoc(removes[i].id)) {
+                CRDTItem remove = null;
+                try {
+                    remove = findItemPointer(removes[i].id, -1);
+                    if (!remove.isDeleted) {
+                        Delete(remove, true);
+                    }
+                } catch (NoSuchElementException e) {
+                }
+                removed[i] = remove;
+            } else {
+                return;
+            }
+        }
+
+        CRDTItem remove;
+        for (int i = 0; i < removed.length; i++) {
+            if ((remove = removed[i]) != null)
+                content.remove(remove);
+        }
+
+        crdtListener.onCRDTRemove(removes);
     }
 
     void integrate(CRDTItem item, int idx_hint, boolean fromWait) {
@@ -204,15 +268,18 @@ public class CRDT {
                     String.format("Should see operation seq #%v, but saw #%v instead", shouldProcessSeq, item.id.seq));
             return;
         }
-        // System.out.println(item.id.agent);
+        int left, destIdx, right;
+        try {
+            left = findItem(item.originLeft, idx_hint - 1);
+            destIdx = left + 1;
+            right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
+        } catch (NoSuchElementException e) {
+            return;
+        }
+
         version.put(item.id.agent, item.id.seq);
-        // if(item.originLeft != null)System.out.println(item.originLeft.agent);
-        int left = findItem(item.originLeft, idx_hint - 1);
-        // System.out.println(left);
-        int destIdx = left + 1;
-        int right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
         boolean scanning = false;
-        // System.out.println(right);
+
         for (int i = destIdx;; ++i) {
             if (!scanning)
                 destIdx = i;

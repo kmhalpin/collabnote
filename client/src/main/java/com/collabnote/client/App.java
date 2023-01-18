@@ -25,20 +25,25 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     private ClientSocket clientSocket;
     private String shareID;
 
-    public App() {
+    public App(boolean visible) {
         Controller controller = this;
 
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                frame = new MainFrame(currentDoc, controller);
-                frame.setVisible(true);
-            }
-        });
+        if (visible)
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    frame = new MainFrame(currentDoc, controller);
+                    frame.setVisible(visible);
+                }
+            });
+    }
+
+    public MainFrame getFrame() {
+        return frame;
     }
 
     public static void main(String[] args) {
-        new App();
+        new App(true);
     }
 
     @Override
@@ -47,7 +52,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
             return;
 
         currentDoc = new CRDT(this);
-        if(clientSocket != null){
+        if (clientSocket != null) {
             try {
                 clientSocket.close();
             } catch (IOException e) {
@@ -87,7 +92,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
 
                     // upload crdt
                     for (CRDTItem crdtItem : currentDoc.returnCopy()) {
-                        clientSocket.sendData(new DataPayload(Type.INSERT, shareID, crdtItem, 0));
+                        clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
                     }
                     clientSocket.sendData(new DataPayload(Type.SHARE, shareID, null, 0));
                 }
@@ -153,6 +158,12 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
             case INSERT:
                 currentDoc.addInsertOperationToWaitList(data.getCrdtItem());
                 break;
+            case ACKINSERT:
+                currentDoc.ackInsert(data.getCrdtItem());
+                break;
+            case ACKDELETE:
+                currentDoc.ackDelete(data.getRemoves());
+                break;
             case DONE:
                 break;
             case CONNECT:
@@ -173,7 +184,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
         if (clientSocket == null || shareID == null)
             return;
 
-        clientSocket.sendData(new DataPayload(Type.CARET, shareID, null, index));
+        clientSocket.sendData(DataPayload.caretPayload(shareID, index));
     }
 
     @Override
@@ -182,7 +193,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
         if (clientSocket == null || shareID == null)
             return;
 
-        clientSocket.sendData(new DataPayload(Type.INSERT, shareID, crdtItem, 0));
+        clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
     }
 
     @Override
@@ -191,7 +202,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
         if (clientSocket == null || shareID == null)
             return;
 
-        clientSocket.sendData(new DataPayload(Type.DELETE, shareID, crdtItem, 0));
+        clientSocket.sendData(DataPayload.deletePayload(shareID, crdtItem));
     }
 
     @Override
@@ -218,5 +229,11 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
             frame.getEditorPanel().getModel().asyncDelete(item);
         } catch (BadLocationException e) {
         }
+    }
+
+    @Override
+    public void onCRDTRemove(CRDTItem[] remove) {
+        // TODO Auto-generated method stub
+        
     }
 }

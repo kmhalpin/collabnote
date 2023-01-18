@@ -5,6 +5,7 @@
 plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
+    id "me.champeau.jmh"
 }
 
 repositories {
@@ -19,6 +20,8 @@ dependencies {
 
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    jmh 'org.openjdk.jmh:jmh-core:0.9'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:0.9'
 }
 
 tasks.named('test') {
