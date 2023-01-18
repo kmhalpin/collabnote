@@ -2,6 +2,7 @@ package com.collabnote.server.collaborate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTGC;
@@ -14,13 +15,13 @@ public class Collaborate implements CRDTGCListener {
     private boolean isReady;
     private List<ClientHandler> clients;
     private CRDTGC docMaster;
-    private Object docMasterLock;
+    private ReentrantLock docMasterLock;
 
     public Collaborate(String shareID) {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.docMasterLock = new Object();
+        this.docMasterLock = new ReentrantLock();
         this.docMaster = new CRDTGC(this);
     }
 
@@ -31,15 +32,15 @@ public class Collaborate implements CRDTGCListener {
     }
 
     public void delete(CRDTItem item) {
-        synchronized (docMasterLock) {
-            this.docMaster.addDeleteOperationToWaitList(item);
-        }
+        docMasterLock.lock();
+        this.docMaster.addDeleteOperationToWaitList(item);
+        docMasterLock.unlock();
     }
 
     public void insert(CRDTItem item) {
-        synchronized (docMasterLock) {
-            this.docMaster.addInsertOperationToWaitList(item);
-        }
+        docMasterLock.lock();
+        this.docMaster.addInsertOperationToWaitList(item);
+        docMasterLock.unlock();
     }
 
     public List<CRDTItem> getCRDTItems() {

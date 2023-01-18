@@ -191,15 +191,19 @@ public class CRDT {
     }
 
     public CRDTItem localInsert(String agent, int pos, String value) {
-        lock.lock();
-        int i = findItemAtPos(pos);
-        CRDTItem item = new CRDTItem(value,
-                new CRDTID(agent, getNextSeq(agent)),
-                getItemIDAtPos(i - 1),
-                getItemIDAtPos(i),
-                false);
-        integrate(item, i, false);
-        lock.unlock();
+        CRDTItem item;
+        try {
+            lock.lock();
+            int i = findItemAtPos(pos);
+            item = new CRDTItem(value,
+                    new CRDTID(agent, getNextSeq(agent)),
+                    getItemIDAtPos(i - 1),
+                    getItemIDAtPos(i),
+                    false);
+            integrate(item, i, false);
+        } finally {
+            lock.unlock();
+        }
         return item;
     }
 
@@ -235,10 +239,12 @@ public class CRDT {
     public void ackInsert(CRDTItem item) {
         if (!isInDoc(item.id))
             addInsertOperationToWaitList(item);
-
-        CRDTItem pointer = findItemPointer(item.id);
-        pointer.originLeft = item.originLeft;
-        pointer.originRight = item.originRight;
+        try {
+            CRDTItem pointer = findItemPointer(item.id);
+            pointer.originLeft = item.originLeft;
+            pointer.originRight = item.originRight;
+        } catch (NoSuchElementException e) {
+        }
     }
 
     public void ackDelete(CRDTItem[] removes) {
@@ -260,12 +266,15 @@ public class CRDT {
         }
 
         CRDTItem remove;
-        lock.lock();
-        for (int i = 0; i < removed.length; i++) {
-            if ((remove = removed[i]) != null)
-                content.remove(remove);
+        try {
+            lock.lock();
+            for (int i = 0; i < removed.length; i++) {
+                if ((remove = removed[i]) != null)
+                    content.remove(remove);
+            }
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
 
         crdtListener.onCRDTRemove(removes);
     }
