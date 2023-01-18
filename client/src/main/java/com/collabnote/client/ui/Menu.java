@@ -12,7 +12,7 @@ import com.collabnote.client.Controller;
 
 public class Menu extends JMenuBar {
     JMenu fileMenu, editMenu, accountMenu;
-    JMenuItem fileNewItem, fileShareItem, fileConnectItem;
+    JMenuItem fileNewItem, fileShareItem, fileConnectItem, accountPrint;
 
     public Menu(Controller controller) {
         fileMenu = new JMenu("File");
@@ -49,6 +49,17 @@ public class Menu extends JMenuBar {
         fileMenu.add(fileNewItem);
         fileMenu.add(fileShareItem);
         fileMenu.add(fileConnectItem);
+
+        accountPrint = new JMenuItem("Print");
+        accountPrint.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                controller.printCRDT();
+            }
+        });
+
+        accountMenu.add(accountPrint);
 
         add(fileMenu);
         add(editMenu);

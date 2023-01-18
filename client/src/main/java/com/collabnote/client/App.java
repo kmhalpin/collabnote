@@ -207,7 +207,10 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
 
     @Override
     public void printCRDT() {
-        System.out.println(currentDoc.toString());
+        for (CRDTItem item : currentDoc.returnCopy()) {
+            System.out.println(item.toString() + ", ");
+        }
+        System.out.println();
     }
 
     @Override
@@ -234,6 +237,6 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     @Override
     public void onCRDTRemove(CRDTItem[] remove) {
         // TODO Auto-generated method stub
-        
+
     }
 }
