@@ -212,7 +212,10 @@ public class CRDT {
     }
 
     public void Insert(CRDTItem item, boolean fromWait) {
-        integrate(item, -1, fromWait);
+        try {
+            integrate(item, -1, fromWait);
+        } catch (NoSuchElementException e) {
+        }
     }
 
     public void Delete(CRDTItem item, boolean fromWait) {
@@ -261,23 +264,18 @@ public class CRDT {
         crdtListener.onCRDTRemove(removes);
     }
 
-    void integrate(CRDTItem item, int idx_hint, boolean fromWait) {
+    void integrate(CRDTItem item, int idx_hint, boolean fromWait) throws NoSuchElementException {
         int shouldProcessSeq = getNextSeq(item.id.agent);
         if (shouldProcessSeq != item.id.seq) {
             System.out.println(
                     String.format("Should see operation seq #%v, but saw #%v instead", shouldProcessSeq, item.id.seq));
             return;
         }
-        int left, destIdx, right;
-        try {
-            left = findItem(item.originLeft, idx_hint - 1);
-            destIdx = left + 1;
-            right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
-        } catch (NoSuchElementException e) {
-            return;
-        }
 
-        version.put(item.id.agent, item.id.seq);
+        int left = findItem(item.originLeft, idx_hint - 1);
+        int destIdx = left + 1;
+        int right = item.originRight == null ? content.size() : findItem(item.originRight, idx_hint);
+
         boolean scanning = false;
 
         for (int i = destIdx;; ++i) {
@@ -309,6 +307,7 @@ public class CRDT {
                 }
             }
         }
+        version.put(item.id.agent, item.id.seq);
         content.add(destIdx, item);
         if (!item.isDeleted) {
             length++;
