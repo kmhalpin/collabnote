@@ -189,6 +189,7 @@ public class CRDT {
     }
 
     public CRDTItem localInsert(String agent, int pos, String value) {
+        lock.lock();
         int i = findItemAtPos(pos);
         CRDTItem item = new CRDTItem(value,
                 new CRDTID(agent, getNextSeq(agent)),
@@ -196,6 +197,7 @@ public class CRDT {
                 getItemIDAtPos(i),
                 false);
         integrate(item, i, false);
+        lock.unlock();
         return item;
     }
 
@@ -256,10 +258,12 @@ public class CRDT {
         }
 
         CRDTItem remove;
+        lock.lock();
         for (int i = 0; i < removed.length; i++) {
             if ((remove = removed[i]) != null)
                 content.remove(remove);
         }
+        lock.unlock();
 
         crdtListener.onCRDTRemove(removes);
     }
