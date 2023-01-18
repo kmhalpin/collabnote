@@ -235,7 +235,7 @@ public class CRDTGC {
                             int oright = findItem(leItem.originRight);
                             content.get(oright).decreaseReference();
                         }
-                        break;
+                        // break;
                     }
                 }
 
@@ -253,7 +253,7 @@ public class CRDTGC {
                             int oright = findItem(riItem.originRight);
                             content.get(oright).decreaseReference();
                         }
-                        break;
+                        // break;
                     }
                 }
             }
