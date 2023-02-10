@@ -21,7 +21,7 @@ public class Collaborate implements CRDTGCListener {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.docMasterLock = new ReentrantLock();
+        this.docMasterLock = new ReentrantLock(true);
         this.docMaster = new CRDTGC(this);
     }
 
