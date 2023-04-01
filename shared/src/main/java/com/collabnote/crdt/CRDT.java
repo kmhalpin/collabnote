@@ -221,8 +221,11 @@ public class CRDT {
 
     public void Insert(CRDTItem item, boolean fromWait) {
         try {
+            lock.lock();
             integrate(item, -1, fromWait);
         } catch (NoSuchElementException e) {
+        } finally {
+            lock.unlock();
         }
     }
 
