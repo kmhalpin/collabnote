@@ -2,6 +2,7 @@ package com.collabnote.newcrdt;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
@@ -14,7 +15,7 @@ public class CRDT {
     // make sure crdt replica used by 1 thread only on each operation
     ReentrantLock lock;
     // cache last local inserts
-    Marker marker;
+    MarkerManager markerManager;
 
     ArrayList<CRDTItemSerializable> insertQueue;
     ArrayList<CRDTItemSerializable> deleteQueue;
@@ -22,64 +23,27 @@ public class CRDT {
     VersionVectors versionVector;
     private CRDTItem start;
 
-    CRDTListener listener;
+    CRDTRemoteListener remotelistener;
+    CRDTLocalListener localListener;
 
-    public CRDT(int agent, CRDTListener listener) {
-        this.listener = listener;
+    public CRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener) {
+        this.remotelistener = remotelistener;
+        this.localListener = localListener;
         this.agent = agent;
-        this.marker = null;
+        this.markerManager = new MarkerManager();
         this.lock = new ReentrantLock(true);
         this.versionVector = new VersionVectors();
+        this.start = null;
         this.insertQueue = new ArrayList<>(0);
         this.deleteQueue = new ArrayList<>(0);
-    }
-
-    Marker findMarker(int index) {
-        if (this.start == null || index == 0) {
-            return null;
-        }
-
-        CRDTItem p = this.start;
-        int pidx = 0;
-        if (marker != null) {
-            p = marker.item;
-            pidx = marker.index;
-        }
-
-        // iterate right if possible
-        while (p.right != null && pidx < index) {
-            if (!p.isDeleted) {
-                if (index < pidx + 1) {
-                    break;
-                }
-                pidx += 1;
-            }
-            p = p.right;
-        }
-
-        // iterate left if necessary
-        while (p.left != null && pidx > index) {
-            p = p.left;
-            if (!p.isDeleted) {
-                pidx -= 1;
-            }
-        }
-
-        // overwrite cache
-        if (this.marker != null) {
-            this.marker.item = p;
-            this.marker.index = pidx;
-        } else {
-            this.marker = new Marker(p, pidx);
-        }
-
-        return this.marker;
     }
 
     int findIndex(CRDTItem item) {
         if (this.start == item || this.start == null) {
             return 0;
         }
+
+        Marker marker = markerManager.marker;
 
         CRDTItem p = marker != null ? marker.item : start;
         int offset = 0;
@@ -107,7 +71,7 @@ public class CRDT {
             }
 
             if (marker != null) {
-                marker.updateMarker(marker.index + offset, item.isDeleted ? -1 : 1);
+                markerManager.updateMarker(marker.index + offset, item.isDeleted ? -1 : 1);
                 return item.isDeleted ? marker.index + offset + 1 : marker.index + offset - 1;
             }
         }
@@ -117,7 +81,7 @@ public class CRDT {
 
     Position findPosition(int index) {
         // check cache
-        Marker marker = findMarker(index);
+        Marker marker = markerManager.findMarker(this.start, index);
         if (marker != null) {
             Position pos = new Position(marker.item.left, marker.item, marker.index);
             return findNextPosition(pos, index - marker.index);
@@ -152,22 +116,23 @@ public class CRDT {
                     p.left,
                     p.right);
             integrate(item);
-            if (marker != null) {
-                marker.updateMarker(p.index, 1);
+            if (markerManager.marker != null) {
+                markerManager.updateMarker(p.index, 1);
             }
         } catch (Exception e) {
-            // TODO: handle exception
+            e.printStackTrace();
         } finally {
             this.lock.unlock();
         }
+        this.localListener.afterLocalCRDTInsert(item);
         return item;
     }
 
     public ArrayList<CRDTItem> localDelete(int pos, int length) {
+        ArrayList<CRDTItem> deleted = new ArrayList<>();
         try {
             this.lock.lock();
             Position p = findPosition(pos);
-            ArrayList<CRDTItem> deleted = new ArrayList<>();
             int startLen = length;
 
             while (length > 0 && p.right != null) {
@@ -179,48 +144,17 @@ public class CRDT {
                 p.forward();
             }
 
-            if (marker != null) {
-                marker.updateMarker(p.index, -startLen + length);
+            if (markerManager.marker != null) {
+                markerManager.updateMarker(p.index, -startLen + length);
             }
 
-            return deleted;
         } catch (Exception e) {
-            // TODO: handle exception
+            e.printStackTrace();
         } finally {
             this.lock.unlock();
         }
-        return null;
-    }
-
-    CRDTItem bindItem(CRDTItemSerializable item) {
-        if (item.originLeft != null
-                && item.originLeft.agent != item.id.agent
-                && !versionVector.exists(item.originLeft)) {
-            return null;
-        }
-        if (item.originRight != null
-                && item.originRight.agent != item.id.agent
-                && !versionVector.exists(item.originRight)) {
-            return null;
-        }
-
-        CRDTItem bitem = new CRDTItem(
-                item.content,
-                item.id,
-                null,
-                null,
-                item.isDeleted,
-                null,
-                null);
-
-        if (item.originLeft != null) {
-            bitem.left = bitem.originLeft = versionVector.find(item.originLeft);
-        }
-        if (item.originRight != null) {
-            bitem.right = bitem.originRight = versionVector.find(item.originRight);
-        }
-
-        return bitem;
+        this.localListener.afterLocalCRDTDelete(deleted);
+        return deleted;
     }
 
     public void tryRemoteInsert(CRDTItemSerializable item) {
@@ -240,7 +174,7 @@ public class CRDT {
                     continue;
                 }
 
-                CRDTItem bitem = bindItem(i);
+                CRDTItem bitem = item.bindItem(versionVector);
                 if (bitem != null) {
                     remoteInsert(bitem);
                     cont = true;
@@ -256,7 +190,8 @@ public class CRDT {
         ArrayList<CRDTItemSerializable> missing = new ArrayList<>(0);
         for (CRDTItemSerializable i : deleteQueue) {
             if (versionVector.exists(i.id)) {
-                delete(i);
+                CRDTItem bitem = versionVector.find(i.id);
+                delete(bitem);
             } else {
                 missing.add(i);
             }
@@ -266,38 +201,38 @@ public class CRDT {
 
     public void tryRemoteDelete(CRDTItemSerializable item) {
         if (versionVector.exists(item.id)) {
-            delete(item);
+            CRDTItem bitem = versionVector.find(item.id);
+            delete(bitem);
         } else {
             deleteQueue.add(item);
         }
     }
 
-    public void delete(CRDTItemSerializable item) {
-        CRDTItem bitem = versionVector.find(item.id);
-        if (!bitem.isDeleted) {
-            this.listener.onCRDTDelete(new Transaction() {
+    protected void delete(CRDTItem item) {
+        if (!item.isDeleted) {
+            this.remotelistener.onRemoteCRDTDelete(new Transaction() {
 
                 @Override
                 public Pair<Integer, CRDTItem> execute() {
                     try {
                         lock.lock();
-                        bitem.isDeleted = true;
-                        int index = findIndex(bitem);
-                        return new Pair<Integer,CRDTItem>(index, bitem);
+                        item.isDeleted = true;
+                        int index = findIndex(item);
+                        return new Pair<Integer, CRDTItem>(index, item);
                     } catch (Exception e) {
-                        // TODO: handle exception
+                        e.printStackTrace();
                     } finally {
                         lock.unlock();
                     }
                     return null;
                 }
-                
+
             });
         }
     }
 
     public void remoteInsert(CRDTItem item) {
-        this.listener.onCRDTInsert(new Transaction() {
+        this.remotelistener.onRemoteCRDTInsert(new Transaction() {
 
             @Override
             public Pair<Integer, CRDTItem> execute() {
@@ -306,7 +241,7 @@ public class CRDT {
                     integrate(item);
                     return new Pair<Integer, CRDTItem>(findIndex(item), item);
                 } catch (Exception e) {
-                    // TODO: handle exception
+                    e.printStackTrace();
                 } finally {
                     lock.unlock();
                 }
@@ -316,7 +251,7 @@ public class CRDT {
         });
     }
 
-    private void integrate(CRDTItem item) {
+    protected void integrate(CRDTItem item) {
         if ((item.left == null && (item.right == null || item.right.left != null))
                 || (item.left != null && item.left.right != item.right)) {
             CRDTItem left = item.left;
@@ -373,6 +308,16 @@ public class CRDT {
         }
 
         versionVector.put(item.id.agent, item);
+    }
+
+    public List<CRDTItemSerializable> serialize() {
+        List<CRDTItemSerializable> list = new ArrayList<>();
+        CRDTItem i = start;
+        while (i != null) {
+            list.add(i.serialize());
+            i = i.right;
+        }
+        return list;
     }
 
     // follow this alg:

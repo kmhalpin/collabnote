@@ -10,25 +10,28 @@ import org.apache.commons.math3.util.Pair;
 
 import com.collabnote.newcrdt.CRDT;
 import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTListener;
+import com.collabnote.newcrdt.CRDTRemoteListener;
 import com.collabnote.newcrdt.Transaction;
 
-public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTListener {
+public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteListener {
     private CRDT crdt;
 
-    public CRDTDocument(CRDT crdt) {
-        super();
+    public void setCrdt(CRDT crdt) {
         this.crdt = crdt;
     }
 
-    public CRDTDocument(Content c, CRDT crdt) {
+    public CRDTDocument() {
+        super();
+        addDocumentListener(this);
+    }
+
+    public CRDTDocument(Content c) {
         super(c);
-        this.crdt = crdt;
         addDocumentListener(this);
     }
 
     @Override
-    public void onCRDTInsert(Transaction transaction) {
+    public void onRemoteCRDTInsert(Transaction transaction) {
         try {
             this.writeLock();
 
@@ -54,7 +57,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
     }
 
     @Override
-    public void onCRDTDelete(Transaction transaction) {
+    public void onRemoteCRDTDelete(Transaction transaction) {
         try {
             this.writeLock();
 

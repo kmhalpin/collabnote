@@ -67,9 +67,9 @@ public class InsertDeleteBenchmark {
     public void insertDeleteCharacters(InsertDeleteState state) throws BadLocationException {
         InputData data = state.data.get(state.i);
         if (data.isRemove) {
-            state.app.deleteCRDT(0);
+            state.app.getCRDT().localDelete(0, 1);
         } else {
-            state.app.insertCRDT(0, data.character);
+            state.app.getCRDT().localInsert(0, data.character);
         }
         state.i += 1;
     }

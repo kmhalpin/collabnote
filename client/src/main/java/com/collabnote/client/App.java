@@ -6,40 +6,50 @@ package com.collabnote.client;
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.MainFrame;
-import com.collabnote.crdt.CRDT;
-import com.collabnote.crdt.CRDTItem;
-import com.collabnote.crdt.CRDTListener;
+import com.collabnote.documentcrdt.CRDTDocument;
+import com.collabnote.newcrdt.CRDT;
+import com.collabnote.newcrdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
+import com.collabnote.newcrdt.CRDTLocalListener;
 import com.collabnote.socket.DataPayload;
 import com.collabnote.socket.Type;
 
 import java.awt.EventQueue;
 import java.io.IOException;
-import java.util.UUID;
+import java.util.List;
 
-import javax.swing.text.BadLocationException;
+import org.apache.commons.lang3.RandomUtils;
 
-public class App implements Controller, ClientSocketListener, CRDTListener {
-    private String agent = UUID.randomUUID().toString();
+public class App implements Controller, ClientSocketListener, CRDTLocalListener {
+    private int agent;
     private MainFrame frame;
-    private CRDT currentDoc = new CRDT(this);
+
+    private CRDT currentDoc;
+
+    public CRDT getCRDT() {
+        return currentDoc;
+    }
+
+    private CRDTDocument currentDocBinding;
     private ClientSocket clientSocket;
     private String shareID;
 
     public App(boolean visible) {
+        this.agent = RandomUtils.nextInt();
         Controller controller = this;
+
+        currentDocBinding = new CRDTDocument();
+        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDocBinding.setCrdt(currentDoc);
 
         if (visible)
             EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    frame = new MainFrame(currentDoc, controller);
+                    frame = new MainFrame(controller);
                     frame.setVisible(visible);
                 }
             });
-    }
-
-    public MainFrame getFrame() {
-        return frame;
     }
 
     public static void main(String[] args) {
@@ -48,10 +58,6 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
 
     @Override
     public void newNote() {
-        if (frame == null)
-            return;
-
-        currentDoc = new CRDT(this);
         if (clientSocket != null) {
             try {
                 clientSocket.close();
@@ -60,7 +66,13 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
             clientSocket = null;
         }
         shareID = null;
-        frame.newEditorPanel(this);
+
+        currentDocBinding = new CRDTDocument();
+        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDocBinding.setCrdt(currentDoc);
+
+        if (frame != null)
+            frame.newEditorPanel(this);
     }
 
     @Override
@@ -91,7 +103,7 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
                     isReady = true;
 
                     // upload crdt
-                    for (CRDTItem crdtItem : currentDoc.returnCopy()) {
+                    for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
                         clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
                     }
                     clientSocket.sendData(new DataPayload(Type.SHARE, shareID, null, 0));
@@ -110,7 +122,10 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     public void connectNote(String host, String shareID) {
         ClientSocketListener mainListener = this;
 
-        currentDoc = new CRDT(this);
+        currentDocBinding = new CRDTDocument();
+        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDocBinding.setCrdt(currentDoc);
+
         this.shareID = shareID;
         frame.newEditorPanel(this);
 
@@ -153,16 +168,10 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
                 frame.getEditorPanel().updateCaret(data.getAgent(), data.getCaretIndex());
                 break;
             case DELETE:
-                currentDoc.addDeleteOperationToWaitList(data.getCrdtItem());
+                currentDoc.tryRemoteDelete(data.getCrdtItem());
                 break;
             case INSERT:
-                currentDoc.addInsertOperationToWaitList(data.getCrdtItem());
-                break;
-            case ACKINSERT:
-                currentDoc.ackInsert(data.getCrdtItem());
-                break;
-            case ACKDELETE:
-                currentDoc.ackDelete(data.getRemoves());
+                currentDoc.tryRemoteInsert(data.getCrdtItem());
                 break;
             case DONE:
                 break;
@@ -188,55 +197,88 @@ public class App implements Controller, ClientSocketListener, CRDTListener {
     }
 
     @Override
-    public void insertCRDT(int offset, String changes) {
-        CRDTItem crdtItem = currentDoc.localInsert(agent, offset, changes);
-        if (clientSocket == null || shareID == null)
-            return;
-
-        clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
-    }
-
-    @Override
-    public void deleteCRDT(int offset) {
-        CRDTItem crdtItem = currentDoc.localDelete(agent, offset);
-        if (clientSocket == null || shareID == null)
-            return;
-
-        clientSocket.sendData(DataPayload.deletePayload(shareID, crdtItem));
+    public CRDTDocument getDocument() {
+        return this.currentDocBinding;
     }
 
     @Override
     public void printCRDT() {
-        for (CRDTItem item : currentDoc.returnCopy()) {
-            System.out.println(item.toString() + ", ");
+        for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
+            if (crdtItem.isDeleted)
+                continue;
+            System.out.print(crdtItem.content);
         }
         System.out.println();
     }
 
     @Override
-    public CRDT getCRDT() {
-        return this.currentDoc;
+    public void afterLocalCRDTInsert(CRDTItem item) {
+        if (clientSocket == null || shareID == null)
+            return;
+
+        clientSocket.sendData(DataPayload.insertPayload(shareID, item.serialize()));
     }
 
     @Override
-    public void onCRDTInsert(CRDTItem item) {
-        try {
-            frame.getEditorPanel().getModel().asyncInsert(item);
-        } catch (BadLocationException e) {
+    public void afterLocalCRDTDelete(List<CRDTItem> item) {
+        if (clientSocket == null || shareID == null)
+            return;
+
+        for (CRDTItem i : item) {
+            clientSocket.sendData(DataPayload.deletePayload(shareID, i.serialize()));
         }
     }
 
-    @Override
-    public void onCRDTDelete(CRDTItem item) {
-        try {
-            frame.getEditorPanel().getModel().asyncDelete(item);
-        } catch (BadLocationException e) {
-        }
-    }
+    // @Override
+    // public void insertCRDT(int offset, String changes) {
+    // CRDTItem crdtItem = currentDoc.localInsert(agent, offset, changes);
+    // if (clientSocket == null || shareID == null)
+    // return;
 
-    @Override
-    public void onCRDTRemove(CRDTItem[] remove) {
-        // TODO Auto-generated method stub
+    // clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
+    // }
 
-    }
+    // @Override
+    // public void deleteCRDT(int offset) {
+    // CRDTItem crdtItem = currentDoc.localDelete(agent, offset);
+    // if (clientSocket == null || shareID == null)
+    // return;
+
+    // clientSocket.sendData(DataPayload.deletePayload(shareID, crdtItem));
+    // }
+
+    // @Override
+    // public void printCRDT() {
+    // for (CRDTItem item : currentDoc.returnCopy()) {
+    // System.out.println(item.toString() + ", ");
+    // }
+    // System.out.println();
+    // }
+
+    // @Override
+    // public CRDT getCRDT() {
+    // return this.currentDoc;
+    // }
+
+    // @Override
+    // public void onCRDTInsert(CRDTItem item) {
+    // try {
+    // frame.getEditorPanel().getModel().asyncInsert(item);
+    // } catch (BadLocationException e) {
+    // }
+    // }
+
+    // @Override
+    // public void onCRDTDelete(CRDTItem item) {
+    // try {
+    // frame.getEditorPanel().getModel().asyncDelete(item);
+    // } catch (BadLocationException e) {
+    // }
+    // }
+
+    // @Override
+    // public void onCRDTRemove(CRDTItem[] remove) {
+    // // TODO Auto-generated method stub
+
+    // }
 }

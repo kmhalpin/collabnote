@@ -14,9 +14,9 @@ public class ClientSocket implements Closeable {
     private Socket clientSocket = null;
     private boolean closed = false;
     private ObjectOutputStream writer = null;
-    private String agent;
+    private int agent;
 
-    public ClientSocket(String host, String agent, ClientSocketListener clientSocketListener) {
+    public ClientSocket(String host, int agent, ClientSocketListener clientSocketListener) {
         this.agent = agent;
 
         this.networkThread = new Thread(new Runnable() {

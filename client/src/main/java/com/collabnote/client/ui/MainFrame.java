@@ -5,7 +5,6 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.GroupLayout.Alignment;
 
 import com.collabnote.client.Controller;
-import com.collabnote.crdt.CRDT;
 
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
@@ -25,7 +24,7 @@ public class MainFrame extends JFrame {
     private GroupLayout gLayout;
     private EditorPanel editorPanel;
 
-    public MainFrame(CRDT doc, Controller controller) {
+    public MainFrame(Controller controller) {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         setJMenuBar(new Menu(controller));

@@ -62,7 +62,7 @@ public class ClientBenchmark {
     @Measurement(batchSize = 1, iterations = N)
     @Warmup(iterations = warmUpN)
     public void appendCharacters(InsertState state) throws BadLocationException {
-        state.app.insertCRDT(state.data.get(state.i).index, state.data.get(state.i).character);
+        state.app.getCRDT().localInsert(state.data.get(state.i).index, state.data.get(state.i).character);
         state.i += 1;
     }
 
@@ -72,7 +72,7 @@ public class ClientBenchmark {
     @Measurement(batchSize = 1, iterations = N)
     @Warmup(iterations = warmUpN)
     public void prependCharacters(InsertState state) throws BadLocationException {
-        state.app.insertCRDT(0, state.data.get(state.i).character);
+        state.app.getCRDT().localInsert(0, state.data.get(state.i).character);
         state.i += 1;
     }
 
@@ -99,7 +99,7 @@ public class ClientBenchmark {
     @Measurement(batchSize = 1, iterations = N)
     @Warmup(iterations = warmUpN)
     public void randomPositionInsertCharacters(RandomInsertState state) throws BadLocationException {
-        state.app.insertCRDT(state.data.get(state.i).index, state.data.get(state.i).character);
+        state.app.getCRDT().localInsert(state.data.get(state.i).index, state.data.get(state.i).character);
         state.i += 1;
     }
 
@@ -136,9 +136,9 @@ public class ClientBenchmark {
     public void randomPositionInsertDeleteCharacters(RandomInsertDeleteState state) throws BadLocationException {
         InputData input = state.data.get(state.i);
         if (input.isRemove) {
-            state.app.deleteCRDT(input.index);
+            state.app.getCRDT().localDelete(input.index, 1);
         } else {
-            state.app.insertCRDT(input.index, input.character);
+            state.app.getCRDT().localInsert(input.index, input.character);
         }
         state.i += 1;
     }

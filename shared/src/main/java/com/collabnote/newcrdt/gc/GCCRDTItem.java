@@ -5,6 +5,7 @@ import com.collabnote.newcrdt.CRDTItem;
 
 public class GCCRDTItem extends CRDTItem {
     int reference;
+    boolean gc;
 
     public GCCRDTItem(String content, CRDTID id, CRDTItem originLeft, CRDTItem originRight, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
@@ -12,12 +13,20 @@ public class GCCRDTItem extends CRDTItem {
         this.reference = 0;
     }
 
-    void increaseReference() {
-        this.reference++;
+    public GCCRDTItem(CRDTItem item) {
+        this(item.content, item.id, item.originLeft, item.originRight, item.isDeleted, item.left, item.right);
     }
 
-    void decreaseReference() {
-        this.reference--;
+    int increaseReference() {
+        return this.reference++;
+    }
+
+    int decreaseReference() {
+        return this.reference--;
+    }
+
+    boolean isGarbageCollectable() {
+        return super.isDeleted && this.reference == 0;
     }
 
 }

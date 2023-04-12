@@ -1,6 +1,6 @@
 package com.collabnote.newcrdt;
 
-import java.rmi.UnexpectedException;
+import java.util.NoSuchElementException;
 
 public class Position {
     CRDTItem left;
@@ -13,9 +13,9 @@ public class Position {
         this.index = index;
     }
 
-    public void forward() throws UnexpectedException {
+    public void forward() {
         if (this.right == null) {
-            throw new UnexpectedException("null");
+            throw new NoSuchElementException("null");
         }
         if (!this.right.isDeleted) {
             this.index += 1;

@@ -2,22 +2,22 @@ package com.collabnote.socket;
 
 import java.io.Serializable;
 
-import com.collabnote.crdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
 
 public class DataPayload implements Serializable {
-    private String agent;
+    private int agent;
     private Type type;
     private String shareID;
-    private CRDTItem crdtItem;
+    private CRDTItemSerializable crdtItem;
     private int caretIndex;
 
-    private CRDTItem[] removes;
+    private CRDTItemSerializable[] removes;
 
-    public static DataPayload insertPayload(String shareID, CRDTItem crdtItem) {
+    public static DataPayload insertPayload(String shareID, CRDTItemSerializable crdtItem) {
         return new DataPayload(Type.INSERT, shareID, crdtItem, 0);
     }
 
-    public static DataPayload deletePayload(String shareID, CRDTItem crdtItem) {
+    public static DataPayload deletePayload(String shareID, CRDTItemSerializable crdtItem) {
         return new DataPayload(Type.DELETE, shareID, crdtItem, 0);
     }
 
@@ -25,28 +25,28 @@ public class DataPayload implements Serializable {
         return new DataPayload(Type.CARET, shareID, null, caretIndex);
     }
 
-    public static DataPayload ackDeletePayload(String shareID, CRDTItem[] removes) {
+    public static DataPayload ackDeletePayload(String shareID, CRDTItemSerializable[] removes) {
         DataPayload data = new DataPayload(Type.ACKDELETE, shareID, null, 0);
         data.setRemoves(removes);
         return data;
     }
 
-    public static DataPayload ackInsertPayload(String shareID, CRDTItem crdtItem) {
+    public static DataPayload ackInsertPayload(String shareID, CRDTItemSerializable crdtItem) {
         return new DataPayload(Type.ACKINSERT, shareID, crdtItem, 0);
     }
 
-    public DataPayload(Type type, String shareID, CRDTItem crdtItem, int caretIndex) {
+    public DataPayload(Type type, String shareID, CRDTItemSerializable crdtItem, int caretIndex) {
         this.type = type;
         this.shareID = shareID;
         this.crdtItem = crdtItem;
         this.caretIndex = caretIndex;
     }
 
-    public String getAgent() {
+    public int getAgent() {
         return agent;
     }
 
-    public void setAgent(String agent) {
+    public void setAgent(int agent) {
         this.agent = agent;
     }
 
@@ -58,7 +58,7 @@ public class DataPayload implements Serializable {
         return shareID;
     }
 
-    public CRDTItem getCrdtItem() {
+    public CRDTItemSerializable getCrdtItem() {
         return crdtItem;
     }
 
@@ -66,11 +66,11 @@ public class DataPayload implements Serializable {
         return caretIndex;
     }
 
-    public CRDTItem[] getRemoves() {
+    public CRDTItemSerializable[] getRemoves() {
         return removes;
     }
 
-    private void setRemoves(CRDTItem[] removes) {
+    private void setRemoves(CRDTItemSerializable[] removes) {
         this.removes = removes;
     }
 }
