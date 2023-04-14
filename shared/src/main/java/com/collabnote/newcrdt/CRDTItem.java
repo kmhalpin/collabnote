@@ -5,7 +5,7 @@ public class CRDTItem {
     public CRDTID id;
     public CRDTItem originLeft;
     public CRDTItem originRight;
-    public boolean isDeleted;
+    private boolean isDeleted;
     public CRDTItem left;
     public CRDTItem right;
 
@@ -25,5 +25,13 @@ public class CRDTItem {
                 this.id,
                 this.originLeft == null ? null : this.originLeft.id,
                 this.originRight == null ? null : this.originRight.id, isDeleted);
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted() {
+        this.isDeleted = true;
     }
 }

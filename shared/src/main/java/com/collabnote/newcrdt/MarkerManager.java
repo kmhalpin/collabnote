@@ -3,7 +3,7 @@ package com.collabnote.newcrdt;
 // cache last local inserts, used to optimize local insert index finding, can be
 // updated every remote insert.
 public class MarkerManager {
-    Marker marker;
+    public Marker marker;
 
     public MarkerManager() {
         this.marker = null;
@@ -25,7 +25,7 @@ public class MarkerManager {
 
         // iterate right if possible
         while (p.right != null && pidx <= index) {
-            if (!p.isDeleted) {
+            if (!p.isDeleted()) {
                 if (index < pidx + 1) {
                     break;
                 }
@@ -37,7 +37,7 @@ public class MarkerManager {
         // iterate left if necessary
         while (p.left != null && pidx >= index) {
             p = p.left;
-            if (!p.isDeleted) {
+            if (!p.isDeleted()) {
                 pidx -= 1;
             }
         }
@@ -46,6 +46,7 @@ public class MarkerManager {
         if (this.marker != null) {
             this.marker.item = p;
             this.marker.index = pidx;
+            System.out.println(pidx + " " + p.id.seq);
         } else {
             this.marker = new Marker(p, pidx);
         }
@@ -53,16 +54,16 @@ public class MarkerManager {
         return this.marker;
     }
 
-    void updateMarker(int index, int length) {
+    public void updateMarker(int index, int length) {
         if (marker == null) {
             return;
         }
 
         CRDTItem i = marker.item;
         {// adjust position to not pointing deleted item
-            while (i != null && (i.isDeleted)) {
+            while (i != null && (i.isDeleted())) {
                 i = i.left;
-                if (i != null && !i.isDeleted) {
+                if (i != null && !i.isDeleted()) {
                     index -= 1;
                     // since i is not deleted loop will break
                 }

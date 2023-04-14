@@ -3,9 +3,9 @@ package com.collabnote.newcrdt;
 import java.util.NoSuchElementException;
 
 public class Position {
-    CRDTItem left;
-    CRDTItem right;
-    int index;
+    public CRDTItem left;
+    public CRDTItem right;
+    public int index;
 
     public Position(CRDTItem left, CRDTItem right, int index) {
         this.left = left;
@@ -17,7 +17,7 @@ public class Position {
         if (this.right == null) {
             throw new NoSuchElementException("null");
         }
-        if (!this.right.isDeleted) {
+        if (!this.right.isDeleted()) {
             this.index += 1;
         }
         this.left = this.right;

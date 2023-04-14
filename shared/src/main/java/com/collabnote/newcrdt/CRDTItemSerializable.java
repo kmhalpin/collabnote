@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 public class CRDTItemSerializable implements Serializable {
     public String content;
-    CRDTID id;
-    CRDTID originLeft;
-    CRDTID originRight;
+    public CRDTID id;
+    public CRDTID originLeft;
+    public CRDTID originRight;
     public boolean isDeleted;
 
     public CRDTItemSerializable(String content, CRDTID id, CRDTID originLeft, CRDTID originRight, boolean isDeleted) {
@@ -17,7 +17,7 @@ public class CRDTItemSerializable implements Serializable {
         this.isDeleted = isDeleted;
     }
 
-    CRDTItem bindItem(VersionVectors versionVector) {
+    public CRDTItem bindItem(VersionVectors versionVector) {
         if (this.originLeft != null
                 && this.originLeft.agent != this.id.agent
                 && !versionVector.exists(this.originLeft)) {

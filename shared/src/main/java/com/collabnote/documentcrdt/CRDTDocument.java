@@ -36,7 +36,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
             this.writeLock();
 
             Pair<Integer, CRDTItem> result = transaction.execute();
-            if (result == null) {
+            if (result == null || result.getSecond().isDeleted()) {
                 return;
             }
 
@@ -62,7 +62,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
             this.writeLock();
 
             Pair<Integer, CRDTItem> result = transaction.execute();
-            if (result == null) {
+            if (result == null || result.getSecond().isDeleted()) {
                 return;
             }
 

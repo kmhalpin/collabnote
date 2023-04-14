@@ -3,8 +3,8 @@ package com.collabnote.newcrdt;
 import java.io.Serializable;
 
 public class CRDTID implements Serializable {
-    int agent;
-    int seq;
+    public int agent;
+    public int seq;
 
     public CRDTID(int agent, int seq) {
         this.agent = agent;
