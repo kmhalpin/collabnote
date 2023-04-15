@@ -1,6 +1,7 @@
 package com.collabnote.newcrdt.gc;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.collabnote.newcrdt.CRDT;
@@ -19,6 +20,12 @@ public class GCCRDT extends CRDT {
     protected void integrate(CRDTItem item) {
         GCCRDTItem gcItem = new GCCRDTItem(item);
         super.integrate(gcItem);
+        if (gcItem.isDeleted()) {
+            gcItem.setDeleted();
+        } else {
+            // check splitable
+            gcItem.checkSplitGC();
+        }
     }
 
     @Override
@@ -42,21 +49,24 @@ public class GCCRDT extends CRDT {
                 CRDTItem fitem = null;
                 try {
                     fitem = versionVector.find(i.id);
-                    if (fitem != null && ((GCCRDTItem) fitem).isGarbageCollectable()) {
+                    if (fitem != null && !((GCCRDTItem) fitem).isDeleteGroupGCed()) {
                         continue;
                     }
                 } catch (NoSuchElementException e) {
                 }
 
                 CRDTItem bitem = i.bindItem(this.versionVector);
-                if (bitem != null) {
-                    if (fitem != null && !((GCCRDTItem) fitem).isGarbageCollectable()
-                            && (fitem.originLeft == null || fitem.originRight == null)) {
-                        // re integrate delete group
+                if (bitem != null && !((bitem.originLeft != null
+                        && ((GCCRDTItem) bitem.originLeft).isDeleteGroupGCed())
+                        || (bitem.originRight != null
+                                && ((GCCRDTItem) bitem.originRight).isDeleteGroupGCed()))) {
+                    // re integrate delete group
+                    if (fitem != null && ((GCCRDTItem) fitem).isDeleteGroupGCed()) {
                         try {
                             lock.lock();
                             integrate(bitem);
                             versionVector.recover(bitem);
+                            ((GCCRDTItem) bitem).setDeleteGroup((GCCRDTItem) fitem); // move delete group
                             remove(fitem);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -64,15 +74,45 @@ public class GCCRDT extends CRDT {
                             lock.unlock();
                         }
                     } else {
+                        // if garbage collected, recover normally
                         remoteInsert(bitem, false);
                         versionVector.recover(bitem);
                     }
                 } else {
+                    // if bitem not binded, or bitem's origins are isDeleteGroupGCed, queue to
+                    // missing until their origins correct
                     missing.add(i);
                 }
             }
             item = missing;
         }
+    }
+
+    // used by server
+    public List<CRDTItem> findConflictingGC(CRDTItem item) {
+        List<CRDTItem> conflictGC = new ArrayList<>();
+        if ((item.left == null && (item.right == null || item.right.left != null))
+                || (item.left != null && item.left.right != item.right)) {
+            CRDTItem left = item.left;
+
+            CRDTItem o;
+
+            // start from conflicting item
+            if (item.left != null) {
+                o = left.right;
+            } else {
+                o = this.start;
+            }
+
+            while (o != null && o != item.right) {
+                // collect conflicting gc
+                if (o.isDeleted()) {
+                    conflictGC.add(o);
+                }
+                o = o.right;
+            }
+        }
+        return conflictGC;
     }
 
 }

@@ -15,7 +15,7 @@ public class ClientHandler extends Thread {
     private CollaborateDatabase collaborateDatabase;
 
     private Collaborate collaborate;
-    private String agent;
+    private int agent;
     private ClientState state = ClientState.UNKNOWN;
     private Socket clientSocket;
     private ObjectInputStream reader;
@@ -36,8 +36,8 @@ public class ClientHandler extends Thread {
         if (writer == null)
             return;
 
-        if (data.getAgent() == null)
-            data.setAgent("server");
+        if (data.getAgent() == 0)
+            data.setAgent(-1);
         else if (data.getAgent().equals(this.agent))
             return;
 
@@ -137,7 +137,7 @@ public class ClientHandler extends Thread {
             this.collaborate.removeClient(this);
     }
 
-    public String getAgent() {
+    public int getAgent() {
         return agent;
     }
 }
