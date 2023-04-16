@@ -8,11 +8,14 @@ import com.collabnote.newcrdt.CRDTItem;
 public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
+    // used to mark gc
+    public boolean gc;
 
     public GCCRDTItem(String content, CRDTID id, CRDTItem originLeft, CRDTItem originRight, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
         super(content, id, originLeft, originRight, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
+        this.gc = false;
     }
 
     public GCCRDTItem(CRDTItem item) {
@@ -24,12 +27,10 @@ public class GCCRDTItem extends CRDTItem {
     }
 
     public boolean isDeleteGroupGCed() {
-        return super.isDeleted() && !isGarbageCollectable()
-                && ((this.rightDeleteGroup == this && this.originLeft == null)
-                        || (this.leftDeleteGroup == this && this.originRight == null));
+        return super.isDeleted() && !isGarbageCollectable() && gc;
     }
 
-    public void setDeleteGroup(GCCRDTItem item) {
+    public void setDeleteGroupFrom(GCCRDTItem item) {
         this.leftDeleteGroup = item.leftDeleteGroup;
         this.rightDeleteGroup = item.rightDeleteGroup;
         item.rightDeleteGroup.leftDeleteGroup = this;
@@ -67,8 +68,12 @@ public class GCCRDTItem extends CRDTItem {
         }
     }
 
-    // split gc if item integrated inside delete group
     public void checkSplitGC() {
+        checkSplitGC(null);
+    }
+
+    // split gc if item integrated inside delete group
+    public void checkSplitGC(GCCRDTItem group) {
         GCCRDTItem gcItemLeft = (GCCRDTItem) this.left;
         GCCRDTItem gcItemRight = (GCCRDTItem) this.right;
 
@@ -76,8 +81,12 @@ public class GCCRDTItem extends CRDTItem {
                 || gcItemRight != null && gcItemRight.isGarbageCollectable()) {
             // find left delete group
             GCCRDTItem oldLeftDeleteGroup = (GCCRDTItem) gcItemLeft.left;
-            while (oldLeftDeleteGroup.isGarbageCollectable()) {
-                oldLeftDeleteGroup = (GCCRDTItem) oldLeftDeleteGroup.left;
+            if (group != null && group.isDeleted() && !group.isGarbageCollectable()) {
+                oldLeftDeleteGroup = group;
+            } else {
+                while (oldLeftDeleteGroup.isGarbageCollectable()) {
+                    oldLeftDeleteGroup = (GCCRDTItem) oldLeftDeleteGroup.left;
+                }
             }
 
             if (!oldLeftDeleteGroup.isDeleted()) {

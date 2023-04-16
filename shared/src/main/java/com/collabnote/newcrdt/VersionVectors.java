@@ -21,7 +21,7 @@ public class VersionVectors {
     public void recover(CRDTItem item) {
         ArrayList<CRDTItem> version = this.versionVector.get(item.id.agent);
         for (int i = 0; i < version.size(); i++) {
-            if (version.get(i).id.seq > item.id.seq) {
+            if (version.get(i).id.seq >= item.id.seq) {
                 version.add(i, item);
                 break;
             }

@@ -37,6 +37,7 @@ public class ClientHandler extends Thread {
             return;
 
         if (data.getAgent() == 0)
+            // server agent identity
             data.setAgent(-1);
         else if (data.getAgent().equals(this.agent))
             return;

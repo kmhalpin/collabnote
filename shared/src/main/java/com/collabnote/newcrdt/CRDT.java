@@ -38,6 +38,10 @@ public class CRDT {
         this.deleteQueue = new ArrayList<>(0);
     }
 
+    public CRDTItem getStart() {
+        return start;
+    }
+
     protected int findIndex(CRDTItem item) {
         if (this.start == item || this.start == null) {
             return 0;
@@ -232,7 +236,7 @@ public class CRDT {
         }
     }
 
-    public void remoteInsert(CRDTItem item, boolean increaseClock) {
+    public void remoteInsert(CRDTItem item, boolean newItem) {
         this.remotelistener.onRemoteCRDTInsert(new Transaction() {
 
             @Override
@@ -240,9 +244,9 @@ public class CRDT {
                 try {
                     lock.lock();
                     integrate(item);
-                    if (increaseClock)
+                    if (newItem)
                         versionVector.put(item);
-                    return new Pair<Integer, CRDTItem>(findIndex(item), item);
+                    return new Pair<Integer, CRDTItem>(newItem ? findIndex(item) : -1, item);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
