@@ -11,6 +11,7 @@ import com.collabnote.newcrdt.CRDT;
 import com.collabnote.newcrdt.CRDTItem;
 import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.newcrdt.CRDTLocalListener;
+import com.collabnote.newcrdt.gc.GCCRDT;
 import com.collabnote.socket.DataPayload;
 import com.collabnote.socket.Type;
 
@@ -39,7 +40,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
         Controller controller = this;
 
         currentDocBinding = new CRDTDocument();
-        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDoc = new GCCRDT(agent, currentDocBinding, this);
         currentDocBinding.setCrdt(currentDoc);
 
         if (visible)
@@ -68,7 +69,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
         shareID = null;
 
         currentDocBinding = new CRDTDocument();
-        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDoc = new GCCRDT(agent, currentDocBinding, this);
         currentDocBinding.setCrdt(currentDoc);
 
         if (frame != null)
@@ -123,7 +124,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
         ClientSocketListener mainListener = this;
 
         currentDocBinding = new CRDTDocument();
-        currentDoc = new CRDT(agent, currentDocBinding, this);
+        currentDoc = new GCCRDT(agent, currentDocBinding, this);
         currentDocBinding.setCrdt(currentDoc);
 
         this.shareID = shareID;
@@ -203,12 +204,13 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
 
     @Override
     public void printCRDT() {
-        for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
-            if (crdtItem.isDeleted)
-                continue;
-            System.out.print(crdtItem.content);
-        }
-        System.out.println();
+        currentDoc.serialize();
+        // for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
+        //     if (crdtItem.isDeleted)
+        //         continue;
+        //     System.out.print(crdtItem.content);
+        // }
+        // System.out.println();
     }
 
     @Override

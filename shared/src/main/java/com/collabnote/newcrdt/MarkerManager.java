@@ -46,7 +46,6 @@ public class MarkerManager {
         if (this.marker != null) {
             this.marker.item = p;
             this.marker.index = pidx;
-            System.out.println(pidx + " " + p.id.seq);
         } else {
             this.marker = new Marker(p, pidx);
         }

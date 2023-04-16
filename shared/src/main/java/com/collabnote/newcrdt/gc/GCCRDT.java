@@ -2,6 +2,7 @@ package com.collabnote.newcrdt.gc;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -238,6 +239,22 @@ public class GCCRDT extends CRDT {
             }
             item = missing;
         }
+    }
+
+    @Override
+    public List<CRDTItemSerializable> serialize() {
+        List<CRDTItemSerializable> list = new ArrayList<>();
+        GCCRDTItem i = (GCCRDTItem) start;
+        while (i != null) {
+            System.out.print("{ " + i.content + ", "
+                    + (i.rightDeleteGroup != null && i.leftDeleteGroup != null ? "DG" : null) + ", "
+                    + (i.isDeleted() ? "DELETED" : null)
+                    + " }");
+            list.add(i.serialize());
+            i = (GCCRDTItem) i.right;
+        }
+        System.out.println();
+        return list;
     }
 
 }
