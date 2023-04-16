@@ -20,12 +20,17 @@ public class VersionVectors {
     // optimize with binary search
     public void recover(CRDTItem item) {
         ArrayList<CRDTItem> version = this.versionVector.get(item.id.agent);
+        if (version == null) {
+            version = new ArrayList<>();
+            this.versionVector.put(item.id.agent, version);
+        }
         for (int i = 0; i < version.size(); i++) {
             if (version.get(i).id.seq >= item.id.seq) {
                 version.add(i, item);
-                break;
+                return;
             }
         }
+        version.add(item);
     }
 
     public void put(CRDTItem item) {

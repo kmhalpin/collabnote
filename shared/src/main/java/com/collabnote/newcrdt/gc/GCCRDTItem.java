@@ -51,16 +51,14 @@ public class GCCRDTItem extends CRDTItem {
     @Override
     public void setDeleted() {
         super.setDeleted();
-        this.rightDeleteGroup = this;
-        this.leftDeleteGroup = this;
+        this.rightDeleteGroup = this.leftDeleteGroup = this;
 
         if (super.right != null && super.right.isDeleted()) {
             GCCRDTItem gci = (GCCRDTItem) super.right;
             this.rightDeleteGroup = gci.rightDeleteGroup;
 
             if (gci != this.rightDeleteGroup) {
-                gci.rightDeleteGroup = null;
-                gci.leftDeleteGroup = null;
+                gci.rightDeleteGroup = gci.leftDeleteGroup = null;
             }
 
             this.rightDeleteGroup.leftDeleteGroup = this;
@@ -71,8 +69,7 @@ public class GCCRDTItem extends CRDTItem {
             this.leftDeleteGroup = gci.leftDeleteGroup;
 
             if (gci != this.leftDeleteGroup) {
-                gci.rightDeleteGroup = null;
-                gci.leftDeleteGroup = null;
+                gci.rightDeleteGroup = gci.leftDeleteGroup = null;
             }
 
             this.leftDeleteGroup.rightDeleteGroup = this;
@@ -82,8 +79,7 @@ public class GCCRDTItem extends CRDTItem {
             this.leftDeleteGroup.rightDeleteGroup = this.rightDeleteGroup;
             this.rightDeleteGroup.leftDeleteGroup = this.leftDeleteGroup;
 
-            this.rightDeleteGroup = null;
-            this.leftDeleteGroup = null;
+            this.rightDeleteGroup = this.leftDeleteGroup = null;
         }
     }
 

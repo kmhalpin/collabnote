@@ -164,13 +164,34 @@ public class GCCRDT extends CRDT {
     // client gc items expected marked and sorted by deleted group first
     public void GC(ArrayList<CRDTItemSerializable> item) {
         ArrayList<GCCRDTItem> gcitems = new ArrayList<>();
+
+        boolean doGC = true;
         for (CRDTItemSerializable i : item) {
             GCCRDTItem gcitem = (GCCRDTItem) i.bindItem(versionVector);
-            if (gcitem == null) {
+            if (gcitem == null)
                 throw new NoSuchElementException("not expected");
+
+            // make sure everything deleted
+            if (!gcitem.isDeleted())
+                delete(gcitem);
+
+            // check nearby item non deleted
+            if (gcitem.isGarbageCollectable()
+                    && (!((GCCRDTItem) gcitem.left).isGarbageCollectable() && !gcitem.left.isDeleted()
+                            || !((GCCRDTItem) gcitem.right).isGarbageCollectable() && !gcitem.right.isDeleted())) {
+                doGC = false;
             }
-            gcitem.gc = true;
+
             gcitems.add(gcitem);
+        }
+
+        // dont do gc if any non deleted item found
+        if (!doGC) {
+            return;
+        }
+
+        for (GCCRDTItem gcitem : gcitems) {
+            gcitem.gc = true;
         }
 
         for (GCCRDTItem gcitem : gcitems) {
