@@ -4,10 +4,12 @@ import java.util.NoSuchElementException;
 
 import com.collabnote.newcrdt.CRDTID;
 import com.collabnote.newcrdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
 
 public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
+    public int level;
     // used to mark gc
     public boolean gc;
 
@@ -16,6 +18,17 @@ public class GCCRDTItem extends CRDTItem {
         super(content, id, originLeft, originRight, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
         this.gc = false;
+        if (this.originLeft == null || this.originRight == null) {
+            this.level = 0;
+        } else {
+            int originLeftLevel = ((GCCRDTItem) this.originLeft).level;
+            int originRightLevel = ((GCCRDTItem) this.originRight).level;
+            if (originLeftLevel == originRightLevel) {
+                this.level = originLeftLevel + 1;
+            } else {
+                this.level = Math.max(originLeftLevel, originRightLevel);
+            }
+        }
     }
 
     public GCCRDTItem(CRDTItem item) {
@@ -26,8 +39,8 @@ public class GCCRDTItem extends CRDTItem {
         return super.isDeleted() && this.rightDeleteGroup == null && this.leftDeleteGroup == null;
     }
 
-    public boolean isDeleteGroupGCed() {
-        return super.isDeleted() && !isGarbageCollectable() && gc;
+    public boolean isDeleteGroupDelimiter() {
+        return super.isDeleted() && this.rightDeleteGroup != null && this.leftDeleteGroup != null;
     }
 
     public void setDeleteGroupFrom(GCCRDTItem item) {
@@ -53,7 +66,7 @@ public class GCCRDTItem extends CRDTItem {
         super.setDeleted();
         this.rightDeleteGroup = this.leftDeleteGroup = this;
 
-        if (super.right != null && super.right.isDeleted()) {
+        if (super.right != null && super.right.isDeleted() && ((GCCRDTItem) super.right).level == this.level) {
             GCCRDTItem gci = (GCCRDTItem) super.right;
             this.rightDeleteGroup = gci.rightDeleteGroup;
 
@@ -64,7 +77,7 @@ public class GCCRDTItem extends CRDTItem {
             this.rightDeleteGroup.leftDeleteGroup = this;
         }
 
-        if (super.left != null && super.left.isDeleted()) {
+        if (super.left != null && super.left.isDeleted() && ((GCCRDTItem) super.left).level == this.level) {
             GCCRDTItem gci = (GCCRDTItem) super.left;
             this.leftDeleteGroup = gci.leftDeleteGroup;
 
@@ -93,14 +106,15 @@ public class GCCRDTItem extends CRDTItem {
         GCCRDTItem gcItemRight = (GCCRDTItem) this.right;
 
         if (gcItemLeft != null && gcItemLeft.isDeleted()
-                && gcItemRight != null && gcItemRight.isDeleted()) {
+                && gcItemRight != null && gcItemRight.isDeleted()
+                && (gcItemLeft.isGarbageCollectable() || gcItemRight.isGarbageCollectable())) {
+
             // find left delete group
             GCCRDTItem oldLeftDeleteGroup = (GCCRDTItem) gcItemLeft.left;
-            if (leftDeleteGroup != null && leftDeleteGroup.isDeleted()
-                    && !leftDeleteGroup.isGarbageCollectable()) {
+            if (leftDeleteGroup != null && leftDeleteGroup.isDeleteGroupDelimiter()) {
                 oldLeftDeleteGroup = leftDeleteGroup;
             } else {
-                while (oldLeftDeleteGroup.isGarbageCollectable()) {
+                while (!oldLeftDeleteGroup.isDeleteGroupDelimiter()) {
                     oldLeftDeleteGroup = (GCCRDTItem) oldLeftDeleteGroup.left;
                 }
             }
@@ -118,6 +132,12 @@ public class GCCRDTItem extends CRDTItem {
             oldRightDeleteGroup.leftDeleteGroup = gcItemRight;
             gcItemRight.rightDeleteGroup = oldRightDeleteGroup;
         }
+    }
+
+    @Override
+    public CRDTItemSerializable serialize() {
+        return new CRDTItemSerializable(this.content, this.id, this.originLeft.id, this.originRight.id,
+                this.isDeleted());
     }
 
 }

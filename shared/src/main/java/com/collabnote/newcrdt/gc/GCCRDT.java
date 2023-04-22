@@ -94,7 +94,7 @@ public class GCCRDT extends CRDT {
                 conflictingItems.add(o);
 
                 // if item is not deleted, find latest conflicting delete group
-                if (!item.isDeleted() && o.isDeleted() && !((GCCRDTItem) o).isGarbageCollectable()) {
+                if (!item.isDeleted() && ((GCCRDTItem) o).isDeleteGroupDelimiter()) {
                     lastGroup = (GCCRDTItem) o;
                 }
 
@@ -154,103 +154,96 @@ public class GCCRDT extends CRDT {
         super.delete(gcItem);
     }
 
-    // gc item
-    private void remove(GCCRDTItem item) {
-        versionVector.remove(item);
-        item.right.left = item.left;
-        item.left.right = item.right;
-    }
-
     // client gc items expected marked and sorted by deleted group first
+    // runs by network thread
     public void GC(ArrayList<CRDTItemSerializable> item) {
-        ArrayList<GCCRDTItem> gcitems = new ArrayList<>();
+        ArrayList<GCCRDTItem> delimiters = new ArrayList<>();
 
-        boolean doGC = true;
         for (CRDTItemSerializable i : item) {
-            GCCRDTItem gcitem = (GCCRDTItem) i.bindItem(versionVector);
-            if (gcitem == null)
+            GCCRDTItem fitem = (GCCRDTItem) versionVector.find(i.id);
+            if (fitem == null)
                 throw new NoSuchElementException("not expected");
 
             // make sure everything deleted
-            if (!gcitem.isDeleted())
-                delete(gcitem);
+            if (!fitem.isDeleted())
+                delete(fitem);
 
-            // check nearby item non deleted
-            if (gcitem.isGarbageCollectable()
-                    && (!((GCCRDTItem) gcitem.left).isGarbageCollectable() && !gcitem.left.isDeleted()
-                            || !((GCCRDTItem) gcitem.right).isGarbageCollectable() && !gcitem.right.isDeleted())) {
-                doGC = false;
+            delimiters.add(fitem);
+        }
+
+        ArrayList<GCCRDTItem> gcItems = new ArrayList<>(delimiters.size());
+        for (int i = 0; i < delimiters.size(); i += 2) {
+            GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
+            GCCRDTItem gcItemStart = (GCCRDTItem) gcItemLeftDelimiter.right;
+            GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
+            boolean isDelimiter;
+
+            // gc delete group if delimiter not changed
+            this.lock.lock();
+            isDelimiter = gcItemLeftDelimiter.isDeleteGroupDelimiter() && gcItemRightDelimiter.isDeleteGroupDelimiter()
+                    && gcItemLeftDelimiter.rightDeleteGroup == gcItemRightDelimiter
+                    && gcItemRightDelimiter.leftDeleteGroup == gcItemLeftDelimiter;
+            if (isDelimiter) {
+                gcItemLeftDelimiter.right = gcItemRightDelimiter;
+                gcItemRightDelimiter.left = gcItemLeftDelimiter;
             }
+            this.lock.unlock();
 
-            gcitems.add(gcitem);
-        }
-
-        // dont do gc if any non deleted item found
-        if (!doGC) {
-            return;
-        }
-
-        for (GCCRDTItem gcitem : gcitems) {
-            gcitem.gc = true;
-        }
-
-        for (GCCRDTItem gcitem : gcitems) {
-            if (gcitem.isGarbageCollectable()) {
-                this.remove(gcitem);
-            } else if (gcitem.isDeleted()) {
-                // change origin of deleted group to null if possible
-                if (gcitem.originLeft != null && ((GCCRDTItem) gcitem.originLeft).gc) {
-                    gcitem.originLeft = null;
-                }
-                if (gcitem.originRight != null && ((GCCRDTItem) gcitem.originRight).gc) {
-                    gcitem.originRight = null;
-                }
+            // separate from lock
+            if (isDelimiter) {
+                gcItems.add(gcItemStart);
+                gcItems.add(gcItemRightDelimiter);
             }
         }
-    }
 
-    private void recoverDeleteGroup(CRDTItem gcItem, CRDTItem recoverItem) {
-        try {
-            lock.lock();
-            integrate(recoverItem);
-            versionVector.recover(recoverItem);
-            ((GCCRDTItem) recoverItem).setDeleteGroupFrom((GCCRDTItem) gcItem); // move delete group
-            // force remove old delete group
-            remove((GCCRDTItem) gcItem);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
+        // remove vector history without lock, version vector used by network threads
+        // operation
+        // should be safe
+        for (int i = 0; i < gcItems.size(); i += 2) {
+            GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
+            GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+            while (o != rightdelimiter) {
+                o.gc = true;
+                versionVector.remove(o);
+            }
+        }
+
+        // scan delimiter gc origin
+        for (int i = 0; i < delimiters.size(); i += 2) {
+            GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
+            GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
+            if (((GCCRDTItem) gcItemLeftDelimiter.originRight).gc) {
+                gcItemLeftDelimiter.originRight = null;
+            }
+            if (((GCCRDTItem) gcItemRightDelimiter.originLeft).gc) {
+                gcItemRightDelimiter.originLeft = null;
+            }
         }
     }
 
     // client recover can be run concurrently
+    // runs by network thread
     public void recover(ArrayList<CRDTItemSerializable> item) {
         // expected will 0
         while (item.size() > 0) {
             ArrayList<CRDTItemSerializable> missing = new ArrayList<>();
             for (CRDTItemSerializable i : item) {
-                CRDTItem fitem = null;
+                CRDTItem gcItem = null;
                 try {
-                    fitem = versionVector.find(i.id);
-                    if (fitem != null && !((GCCRDTItem) fitem).isDeleteGroupGCed()) {
-                        continue;
-                    }
+                    gcItem = versionVector.find(i.id);
                 } catch (NoSuchElementException e) {
                 }
 
-                CRDTItem bitem = i.bindItem(this.versionVector);
-                if (bitem != null && !((bitem.originLeft != null
-                        && ((GCCRDTItem) bitem.originLeft).isDeleteGroupGCed())
-                        || (bitem.originRight != null
-                                && ((GCCRDTItem) bitem.originRight).isDeleteGroupGCed()))) {
-                    // re integrate delete group
-                    if (fitem != null && ((GCCRDTItem) fitem).isDeleteGroupGCed()) {
-                        recoverDeleteGroup(fitem, bitem);
+                CRDTItem recoverItem = i.bindItem(this.versionVector);
+                if (recoverItem != null) {
+                    // fix existing item, like delimiter
+                    if (gcItem != null) {
+                        gcItem.originLeft = recoverItem.originLeft;
+                        gcItem.originRight = recoverItem.originRight;
                     } else {
                         // if garbage collected, recover normally
-                        remoteInsert(bitem, false);
-                        versionVector.recover(bitem);
+                        remoteInsert(recoverItem, false);
+                        versionVector.recover(recoverItem);
                     }
                 } else {
                     // if bitem not binded, or bitem's origins are isDeleteGroupGCed, queue to
@@ -269,9 +262,9 @@ public class GCCRDT extends CRDT {
         while (i != null) {
             System.out.print("{ " + i.content + ", "
                     + (i.rightDeleteGroup != null && i.leftDeleteGroup != null ? "DG" : null) + ", "
-                    + (i.isDeleted() ? "DELETED" : null)
+                    + (i.isDeleted() ? "DELETED" : null) + ", " + i.level
                     + " }");
-            list.add(i.serialize());
+            list.add((CRDTItemSerializable) i.serialize());
             i = (GCCRDTItem) i.right;
         }
         System.out.println();

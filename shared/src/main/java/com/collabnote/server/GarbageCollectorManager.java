@@ -24,29 +24,43 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             try {
                 Thread.sleep(15000);
 
-                List<GCCRDTItem> broadcastItems = new ArrayList<>();
-                Set<GCCRDTItem> gcable = new HashSet<>();
-                lock.lock();
+                List<GCCRDTItem> gcDelimiters = new ArrayList<>();
 
+                lock.lock();
                 GCCRDTItem ops = (GCCRDTItem) this.crdt.getStart();
+
+                boolean isInsideDeleteGroup = false;
+                int opsCounter = 0;
                 while (ops != null) {
                     if (ops.isGarbageCollectable()) {
-                        gcable.add(ops);
-                        ops.gc = true;
-                        if (gcable.remove(ops.originLeft)) {
-                            ((GCCRDTItem) ops.originLeft).gc = false;
+                        opsCounter++;
+                    } else if (ops.isDeleteGroupDelimiter()
+                            && ops.leftDeleteGroup != ops.rightDeleteGroup // skip standalone delimiter
+                            && !ops.gc && !ops.leftDeleteGroup.gc) {
+                        isInsideDeleteGroup = !isInsideDeleteGroup;
+                        if (isInsideDeleteGroup) { // right delimiter
+                            opsCounter = 0;
+                        } else { // left delimiter
+                            if (opsCounter > 0) {
+                                gcDelimiters.add(ops.leftDeleteGroup);
+                                gcDelimiters.add(ops);
+                                ops.leftDeleteGroup.gc = ops.gc = true;
+                            }
                         }
-                        if (gcable.remove(ops.originRight)) {
-                            ((GCCRDTItem) ops.originRight).gc = false;
-                        }
-                    } else if (ops.isDeleted()) {
-                        ops.gc = true;
-                        broadcastItems.add(ops);
                     }
                     ops = (GCCRDTItem) ops.right;
                 }
-                broadcastItems.addAll(gcable);
-                if (broadcastItems.size() > 0) {
+
+                for (int i = 0; i < gcDelimiters.size(); i += 2) {
+                    GCCRDTItem o = (GCCRDTItem) gcDelimiters.get(i).right;
+                    GCCRDTItem rightdelimiter = o.rightDeleteGroup;
+                    while (o != rightdelimiter) {
+                        o.gc = true;
+                    }
+                }
+
+                if (gcDelimiters.size() > 0) {
+                    // broadcast gc
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -61,40 +75,40 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         this.lock = new ReentrantLock(true);
     }
 
-    private List<CRDTItem> findConflictingGC(CRDTItem item) {
-        List<CRDTItem> conflictGC = new ArrayList<>();
+    private List<GCCRDTItem> findConflictingGC(CRDTItem item) {
+        List<GCCRDTItem> conflictGC = new ArrayList<>();
 
-        CRDTItem o;
+        GCCRDTItem o;
 
         // start from left origin
         if (item.originLeft != null) {
-            o = item.originLeft;
+            o = (GCCRDTItem) item.originLeft;
         } else {
-            o = this.crdt.getStart();
+            o = (GCCRDTItem) this.crdt.getStart();
         }
 
         while (o != null && ((item.originRight != null && o != item.originRight.right) || o != null)) {
             // collect conflicting or origin gc
-            if (o.isDeleted()) {
+            if (o.isDeleted() && o.gc) {
                 conflictGC.add(o);
             }
-            o = o.right;
+            o = (GCCRDTItem) o.right;
         }
 
         if (conflictGC.size() > 0) {
             CRDTItem l = conflictGC.get(0);
-            while (l.left != null && l.left.isDeleted()) {
-                conflictGC.add(0, l.left);
-                if (!((GCCRDTItem) l.left).isGarbageCollectable()) {
+            while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
+                conflictGC.add(0, (GCCRDTItem) l.left);
+                if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
                     break;
                 }
                 l = l.left;
             }
 
             CRDTItem r = conflictGC.get(conflictGC.size() - 1);
-            while (r.right != null && r.right.isDeleted()) {
-                conflictGC.add(r.right);
-                if (!((GCCRDTItem) r.right).isGarbageCollectable()) {
+            while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
+                conflictGC.add((GCCRDTItem) r.right);
+                if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
                     break;
                 }
                 r = r.right;
@@ -110,7 +124,9 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
 
-        List<CRDTItem> items = this.findConflictingGC(result.getSecond());
+        List<GCCRDTItem> items = this.findConflictingGC(result.getSecond());
+        for (GCCRDTItem i : items) {
+        }
     }
 
     @Override
