@@ -3,10 +3,10 @@
  */
 package com.collabnote.client;
 
+import com.collabnote.client.documentcrdt.CRDTDocument;
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.MainFrame;
-import com.collabnote.documentcrdt.CRDTDocument;
 import com.collabnote.newcrdt.CRDT;
 import com.collabnote.newcrdt.CRDTItem;
 import com.collabnote.newcrdt.CRDTItemSerializable;
@@ -89,7 +89,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
             @Override
             public void onStart() {
                 // create share space
-                clientSocket.sendData(new DataPayload(Type.SHARE, null, null, 0));
+                clientSocket.sendData(new DataPayload(Type.SHARE, null, null, 0, null));
                 mainListener.onStart();
             }
 
@@ -107,7 +107,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
                     for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
                         clientSocket.sendData(DataPayload.insertPayload(shareID, crdtItem));
                     }
-                    clientSocket.sendData(new DataPayload(Type.SHARE, shareID, null, 0));
+                    clientSocket.sendData(new DataPayload(Type.SHARE, shareID, null, 0, null));
                 }
             }
 
@@ -135,7 +135,7 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
 
             @Override
             public void onStart() {
-                clientSocket.sendData(new DataPayload(Type.CONNECT, shareID, null, 0));
+                clientSocket.sendData(new DataPayload(Type.CONNECT, shareID, null, 0, null));
                 mainListener.onStart();
             }
 

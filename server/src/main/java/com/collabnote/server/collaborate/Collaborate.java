@@ -2,11 +2,10 @@ package com.collabnote.server.collaborate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
-import com.collabnote.crdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.newcrdt.gc.GCCRDT;
-import com.collabnote.crdt.CRDTGCListener;
+import com.collabnote.server.gc.GarbageCollectorManager;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
 
@@ -14,13 +13,16 @@ public class Collaborate {
     private String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
-    private CRDTGC docMaster;
+    private GCCRDT docMaster;
+    private GarbageCollectorManager gcManager;
 
     public Collaborate(String shareID) {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.docMaster = new CRDTGC(this);
+        this.gcManager = new GarbageCollectorManager();
+        this.docMaster = new GCCRDT(-1, gcManager, null);
+        this.gcManager.setCrdt(docMaster);
     }
 
     public void broadcast(DataPayload data) {
@@ -29,26 +31,26 @@ public class Collaborate {
         }
     }
 
-    public void delete(CRDTItem item) {
-        this.docMaster.addDeleteOperationToWaitList(item);
+    public void delete(CRDTItemSerializable item) {
+        this.docMaster.tryRemoteDelete(item);
     }
 
-    public void insert(CRDTItem item) {
-        this.docMaster.addInsertOperationToWaitList(item);
+    public void insert(CRDTItemSerializable item) {
+        this.docMaster.tryRemoteInsert(item);
     }
 
-    public List<CRDTItem> getCRDTItems() {
-        return this.docMaster.returnCopy();
+    public List<CRDTItemSerializable> getCRDTItems() {
+        return this.docMaster.serialize();
     }
 
     // @Override
     // public void onCRDTInsert(CRDTItem item) {
-    //     broadcast(DataPayload.ackInsertPayload(shareID, new CRDTItem(item)));
+    // broadcast(DataPayload.ackInsertPayload(shareID, new CRDTItem(item)));
     // }
 
     // @Override
     // public void onCRDTRemove(CRDTItem[] remove) {
-    //     broadcast(DataPayload.ackDeletePayload(shareID, remove));
+    // broadcast(DataPayload.ackDeletePayload(shareID, remove));
     // }
 
     public boolean isReady() {

@@ -1,9 +1,7 @@
-package com.collabnote.server;
+package com.collabnote.server.gc;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.math3.util.Pair;
@@ -51,6 +49,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
                     ops = (GCCRDTItem) ops.right;
                 }
 
+                // set selected delete group operations to gc
                 for (int i = 0; i < gcDelimiters.size(); i += 2) {
                     GCCRDTItem o = (GCCRDTItem) gcDelimiters.get(i).right;
                     GCCRDTItem rightdelimiter = o.rightDeleteGroup;
@@ -70,9 +69,12 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         } while (true);
     }
 
-    public GarbageCollectorManager(GCCRDT crdt) {
-        this.crdt = crdt;
+    public GarbageCollectorManager() {
         this.lock = new ReentrantLock(true);
+    }
+
+    public void setCrdt(GCCRDT crdt) {
+        this.crdt = crdt;
     }
 
     private List<GCCRDTItem> findConflictingGC(CRDTItem item) {
@@ -91,6 +93,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             // collect conflicting or origin gc
             if (o.isDeleted() && o.gc) {
                 conflictGC.add(o);
+                o.gc = false;
             }
             o = (GCCRDTItem) o.right;
         }
@@ -99,6 +102,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             CRDTItem l = conflictGC.get(0);
             while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
                 conflictGC.add(0, (GCCRDTItem) l.left);
+                ((GCCRDTItem) l.left).gc = false;
                 if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
                     break;
                 }
@@ -108,6 +112,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             CRDTItem r = conflictGC.get(conflictGC.size() - 1);
             while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
                 conflictGC.add((GCCRDTItem) r.right);
+                ((GCCRDTItem) r.right).gc = false;
                 if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
                     break;
                 }

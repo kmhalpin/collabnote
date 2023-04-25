@@ -1,4 +1,4 @@
-package com.collabnote.documentcrdt;
+package com.collabnote.client.documentcrdt;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;

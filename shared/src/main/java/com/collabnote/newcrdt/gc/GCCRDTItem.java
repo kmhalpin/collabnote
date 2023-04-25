@@ -107,7 +107,8 @@ public class GCCRDTItem extends CRDTItem {
 
         if (gcItemLeft != null && gcItemLeft.isDeleted()
                 && gcItemRight != null && gcItemRight.isDeleted()
-                && (gcItemLeft.isGarbageCollectable() || gcItemRight.isGarbageCollectable())) {
+                && ((gcItemLeft.isGarbageCollectable() || gcItemRight.isGarbageCollectable())
+                        || gcItemLeft.rightDeleteGroup == gcItemRight)) {
 
             // find left delete group
             GCCRDTItem oldLeftDeleteGroup = (GCCRDTItem) gcItemLeft.left;
@@ -128,9 +129,11 @@ public class GCCRDTItem extends CRDTItem {
             // split group
             oldLeftDeleteGroup.rightDeleteGroup = gcItemLeft;
             gcItemLeft.leftDeleteGroup = oldLeftDeleteGroup;
+            gcItemLeft.rightDeleteGroup = gcItemLeft;
 
             oldRightDeleteGroup.leftDeleteGroup = gcItemRight;
             gcItemRight.rightDeleteGroup = oldRightDeleteGroup;
+            gcItemRight.leftDeleteGroup = gcItemRight;
         }
     }
 

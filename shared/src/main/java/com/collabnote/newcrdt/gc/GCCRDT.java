@@ -223,11 +223,11 @@ public class GCCRDT extends CRDT {
 
     // client recover can be run concurrently
     // runs by network thread
-    public void recover(ArrayList<CRDTItemSerializable> item) {
+    public void recover(ArrayList<CRDTItemSerializable> recoverItems, CRDTItemSerializable item) {
         // expected will 0
-        while (item.size() > 0) {
+        while (recoverItems.size() > 0) {
             ArrayList<CRDTItemSerializable> missing = new ArrayList<>();
-            for (CRDTItemSerializable i : item) {
+            for (CRDTItemSerializable i : recoverItems) {
                 CRDTItem gcItem = null;
                 try {
                     gcItem = versionVector.find(i.id);
@@ -251,8 +251,13 @@ public class GCCRDT extends CRDT {
                     missing.add(i);
                 }
             }
-            item = missing;
+            recoverItems = missing;
         }
+
+        // concurrently split gc item to optimize soon
+
+        // insert item
+        tryRemoteInsert(item);
     }
 
     @Override

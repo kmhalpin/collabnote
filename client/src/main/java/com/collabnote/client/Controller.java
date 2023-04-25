@@ -1,6 +1,6 @@
 package com.collabnote.client;
 
-import com.collabnote.documentcrdt.CRDTDocument;
+import com.collabnote.client.documentcrdt.CRDTDocument;
 
 public interface Controller {
     public void newNote();

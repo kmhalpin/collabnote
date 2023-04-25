@@ -11,10 +11,10 @@ public enum Type {
                 // -> Server send CRDT -> sync
 
     RECOVER(7), // Recover operation from server
-    GC(8), // Garbage collect operation
+    GC(8); // Garbage collect operation
 
-    ACKINSERT(9), // Sent by server: Acknowledge inserted text
-    ACKDELETE(10); // Sent by server: Acknowledge deleted text
+    // ACKINSERT(9), // Sent by server: Acknowledge inserted text
+    // ACKDELETE(10); // Sent by server: Acknowledge deleted text
 
     public final int type;
 

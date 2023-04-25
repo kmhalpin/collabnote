@@ -5,7 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import com.collabnote.crdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.server.collaborate.CollaborateDatabase;
 import com.collabnote.socket.DataPayload;
@@ -39,7 +39,7 @@ public class ClientHandler extends Thread {
         if (data.getAgent() == 0)
             // server agent identity
             data.setAgent(-1);
-        else if (data.getAgent().equals(this.agent))
+        else if (data.getAgent() == this.agent)
             return;
 
         try {
@@ -91,7 +91,7 @@ public class ClientHandler extends Thread {
                                 this.state = ClientState.READY;
                                 this.collaborate.addClient(this);
 
-                                sendData(new DataPayload(Type.SHARE, shareID, null, 0));
+                                sendData(new DataPayload(Type.SHARE, shareID, null, 0, null));
                             } else if (this.state == ClientState.READY) {
                                 this.collaborate.setReady(true);
                             }
@@ -107,10 +107,10 @@ public class ClientHandler extends Thread {
                                     this.state = ClientState.READY;
                                     this.collaborate.addClient(this);
 
-                                    for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
+                                    for (CRDTItemSerializable crdtItem : this.collaborate.getCRDTItems()) {
                                         sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
                                     }
-                                    sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0));
+                                    sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
                                 } else {
                                     this.clientSocket.close();
                                 }
