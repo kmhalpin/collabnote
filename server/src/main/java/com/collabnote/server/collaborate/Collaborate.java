@@ -10,7 +10,7 @@ import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
 
 public class Collaborate {
-    private String shareID;
+    public String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
     private GCCRDT docMaster;
@@ -20,8 +20,8 @@ public class Collaborate {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.gcManager = new GarbageCollectorManager();
-        this.docMaster = new GCCRDT(-1, gcManager, null);
+        this.gcManager = new GarbageCollectorManager(this);
+        this.docMaster = new GCCRDT(-1, gcManager, null, false);
         this.gcManager.setCrdt(docMaster);
     }
 

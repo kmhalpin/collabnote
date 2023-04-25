@@ -17,37 +17,6 @@ public class CRDTItemSerializable implements Serializable {
         this.isDeleted = isDeleted;
     }
 
-    public CRDTItem bindItem(VersionVectors versionVector) {
-        if (this.originLeft != null
-                && this.originLeft.agent != this.id.agent
-                && !versionVector.exists(this.originLeft)) {
-            return null;
-        }
-        if (this.originRight != null
-                && this.originRight.agent != this.id.agent
-                && !versionVector.exists(this.originRight)) {
-            return null;
-        }
-
-        CRDTItem bitem = new CRDTItem(
-                this.content,
-                this.id,
-                null,
-                null,
-                this.isDeleted,
-                null,
-                null);
-
-        if (this.originLeft != null) {
-            bitem.left = bitem.originLeft = versionVector.find(this.originLeft);
-        }
-        if (this.originRight != null) {
-            bitem.right = bitem.originRight = versionVector.find(this.originRight);
-        }
-
-        return bitem;
-    }
-
     @Override
     public String toString() {
         return "{"

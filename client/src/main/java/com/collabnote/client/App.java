@@ -179,6 +179,12 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
             case CONNECT:
             case SHARE:
                 break;
+            case GC:
+                ((GCCRDT) currentDoc).GC(data.getCrdtList());
+                break;
+            case RECOVER:
+                ((GCCRDT) currentDoc).recover(data.getCrdtList(), data.getCrdtItem());
+                break;
             default:
                 break;
         }
@@ -206,9 +212,9 @@ public class App implements Controller, ClientSocketListener, CRDTLocalListener 
     public void printCRDT() {
         currentDoc.serialize();
         // for (CRDTItemSerializable crdtItem : currentDoc.serialize()) {
-        //     if (crdtItem.isDeleted)
-        //         continue;
-        //     System.out.print(crdtItem.content);
+        // if (crdtItem.isDeleted)
+        // continue;
+        // System.out.print(crdtItem.content);
         // }
         // System.out.println();
     }

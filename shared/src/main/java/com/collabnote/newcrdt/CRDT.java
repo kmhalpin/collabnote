@@ -38,6 +38,41 @@ public class CRDT {
         this.deleteQueue = new ArrayList<>(0);
     }
 
+    public CRDTItem bindItem(CRDTItemSerializable item, CRDTItem bitem) {
+        if (item.originLeft != null
+                && item.originLeft.agent != item.id.agent
+                && !versionVector.exists(item.originLeft)) {
+            return null;
+        }
+        if (item.originRight != null
+                && item.originRight.agent != item.id.agent
+                && !versionVector.exists(item.originRight)) {
+            return null;
+        }
+
+        if (item.originLeft != null) {
+            bitem.left = bitem.originLeft = versionVector.find(item.originLeft);
+        }
+        if (item.originRight != null) {
+            bitem.right = bitem.originRight = versionVector.find(item.originRight);
+        }
+
+        return bitem;
+    }
+
+    public CRDTItem bindItem(CRDTItemSerializable item) {
+        CRDTItem bitem = new CRDTItem(
+                item.content,
+                item.id,
+                null,
+                null,
+                item.isDeleted,
+                null,
+                null);
+
+        return this.bindItem(item, bitem);
+    }
+
     public CRDTItem getStart() {
         return start;
     }
@@ -108,17 +143,22 @@ public class CRDT {
     }
 
     public CRDTItem localInsert(int pos, String value) {
-        CRDTItem item = null;
+        CRDTItem item = new CRDTItem(value,
+                new CRDTID(agent, versionVector.get(agent) + 1),
+                null,
+                null,
+                false,
+                null,
+                null);
+        return this.localInsert(pos, value, item);
+    }
+
+    public CRDTItem localInsert(int pos, String value, CRDTItem item) {
         try {
             this.lock.lock();
             Position p = findPosition(pos);
-            item = new CRDTItem(value,
-                    new CRDTID(agent, versionVector.get(agent) + 1),
-                    p.left,
-                    p.right,
-                    false,
-                    p.left,
-                    p.right);
+            item.left = item.originLeft = p.left;
+            item.right = item.originRight = p.right;
             integrate(item);
             versionVector.put(item);
             if (markerManager.marker != null) {
@@ -179,7 +219,7 @@ public class CRDT {
                     continue;
                 }
 
-                CRDTItem bitem = item.bindItem(versionVector);
+                CRDTItem bitem = this.bindItem(item);
                 if (bitem != null) {
                     remoteInsert(bitem, true);
                     cont = true;

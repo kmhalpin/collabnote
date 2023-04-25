@@ -7,14 +7,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.math3.util.Pair;
 
 import com.collabnote.newcrdt.CRDTItem;
+import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.newcrdt.CRDTRemoteListener;
 import com.collabnote.newcrdt.gc.GCCRDT;
 import com.collabnote.newcrdt.gc.GCCRDTItem;
+import com.collabnote.server.collaborate.Collaborate;
+import com.collabnote.socket.DataPayload;
 import com.collabnote.newcrdt.Transaction;
 
 public class GarbageCollectorManager extends Thread implements CRDTRemoteListener {
     private ReentrantLock lock;
     private GCCRDT crdt;
+    private Collaborate collaborate;
 
     @Override
     public void run() {
@@ -69,16 +73,19 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         } while (true);
     }
 
-    public GarbageCollectorManager() {
+    public GarbageCollectorManager(Collaborate collaborate) {
         this.lock = new ReentrantLock(true);
+        this.collaborate = collaborate;
+        this.start();
     }
 
     public void setCrdt(GCCRDT crdt) {
         this.crdt = crdt;
     }
 
-    private List<GCCRDTItem> findConflictingGC(CRDTItem item) {
+    private ArrayList<CRDTItemSerializable> findConflictingGC(CRDTItem item) {
         List<GCCRDTItem> conflictGC = new ArrayList<>();
+        ArrayList<CRDTItemSerializable> conflictGCSerialize = new ArrayList<>();
 
         GCCRDTItem o;
 
@@ -120,7 +127,11 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             }
         }
 
-        return conflictGC;
+        for (GCCRDTItem i : conflictGC) {
+            conflictGCSerialize.add(i.serialize());
+        }
+
+        return conflictGCSerialize;
     }
 
     @Override
@@ -129,8 +140,13 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
 
-        List<GCCRDTItem> items = this.findConflictingGC(result.getSecond());
-        for (GCCRDTItem i : items) {
+        ArrayList<CRDTItemSerializable> items = this.findConflictingGC(result.getSecond());
+        if (items.size() > 0) {
+            this.collaborate.broadcast(
+                    DataPayload.recoverPayload(this.collaborate.shareID, result.getSecond().serialize(), items));
+        } else {
+            this.collaborate
+                    .broadcast(DataPayload.insertPayload(this.collaborate.shareID, result.getSecond().serialize()));
         }
     }
 
@@ -139,6 +155,8 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         lock.lock();
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
+        this.collaborate.broadcast(DataPayload.deletePayload(this.collaborate.shareID,
+                result.getSecond().serialize()));
     }
 
 }

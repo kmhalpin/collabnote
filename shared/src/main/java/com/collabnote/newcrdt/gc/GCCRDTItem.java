@@ -139,7 +139,8 @@ public class GCCRDTItem extends CRDTItem {
 
     @Override
     public CRDTItemSerializable serialize() {
-        return new CRDTItemSerializable(this.content, this.id, this.originLeft.id, this.originRight.id,
+        return new CRDTItemSerializable(this.content, this.id, this.originLeft != null ? this.originLeft.id : null,
+                this.originRight != null ? this.originRight.id : null,
                 this.isDeleted());
     }
 

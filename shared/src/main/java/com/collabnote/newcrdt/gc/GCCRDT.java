@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import com.collabnote.newcrdt.CRDT;
+import com.collabnote.newcrdt.CRDTID;
 import com.collabnote.newcrdt.CRDTItem;
 import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.newcrdt.CRDTLocalListener;
@@ -14,15 +15,36 @@ import com.collabnote.newcrdt.CRDTRemoteListener;
 import com.collabnote.newcrdt.Marker;
 
 public class GCCRDT extends CRDT {
+    protected boolean clientReplica;
+
+    public GCCRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener,
+            boolean clientReplica) {
+        super(agent, remotelistener, localListener);
+        this.clientReplica = clientReplica;
+    }
 
     public GCCRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener) {
-        super(agent, remotelistener, localListener);
+        this(agent, remotelistener, localListener, false);
+    }
+
+    @Override
+    public CRDTItem bindItem(CRDTItemSerializable item) {
+        CRDTItem bitem = new GCCRDTItem(
+                item.content,
+                item.id,
+                null,
+                null,
+                item.isDeleted,
+                null,
+                null);
+
+        return this.bindItem(item, bitem);
     }
 
     // find index with optimized search, skips deleted group
     @Override
     protected int findIndex(CRDTItem item) {
-        if (this.start == item || this.start == null) {
+        if (!this.clientReplica || this.start == item || this.start == null) {
             return 0;
         }
 
@@ -138,20 +160,30 @@ public class GCCRDT extends CRDT {
 
     @Override
     protected void integrate(CRDTItem item) {
-        GCCRDTItem gcItem = new GCCRDTItem(item);
-        GCCRDTItem lastGroup = this.GCIntegrate(gcItem);
-        if (gcItem.isDeleted()) {
-            gcItem.setDeleted();
+        GCCRDTItem lastGroup = this.GCIntegrate(item);
+        if (item.isDeleted()) {
+            item.setDeleted();
         } else {
             // check splitable
-            gcItem.checkSplitGC(lastGroup);
+            ((GCCRDTItem) item).checkSplitGC(lastGroup);
         }
     }
 
     @Override
     public void delete(CRDTItem item) {
-        GCCRDTItem gcItem = new GCCRDTItem(item);
-        super.delete(gcItem);
+        super.delete(item);
+    }
+    
+    @Override
+    public CRDTItem localInsert(int pos, String value) {
+        CRDTItem item = new GCCRDTItem(value,
+                new CRDTID(agent, versionVector.get(agent) + 1),
+                null,
+                null,
+                false,
+                null,
+                null);
+        return this.localInsert(pos, value, item);
     }
 
     // client gc items expected marked and sorted by deleted group first
@@ -234,7 +266,7 @@ public class GCCRDT extends CRDT {
                 } catch (NoSuchElementException e) {
                 }
 
-                CRDTItem recoverItem = i.bindItem(this.versionVector);
+                CRDTItem recoverItem = this.bindItem(i);
                 if (recoverItem != null) {
                     // fix existing item, like delimiter
                     if (gcItem != null) {
