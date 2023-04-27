@@ -24,10 +24,11 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
     public void run() {
         do {
             try {
-                Thread.sleep(15000);
+                Thread.sleep(30000);
 
                 try {
                     lock.lock();
+                    System.out.println("GC START");
                     List<GCCRDTItem> gcDelimiters = new ArrayList<>();
                     GCCRDTItem ops = (GCCRDTItem) this.crdt.getStart();
 
@@ -38,7 +39,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
                             opsCounter++;
                         } else if (ops.isDeleteGroupDelimiter()
                                 && ops.leftDeleteGroup != ops.rightDeleteGroup // skip standalone delimiter
-                                && !ops.gc && !ops.leftDeleteGroup.gc) {
+                                && !ops.leftDeleteGroup.gc && !ops.rightDeleteGroup.gc) {
                             isInsideDeleteGroup = !isInsideDeleteGroup;
                             if (isInsideDeleteGroup) { // right delimiter
                                 opsCounter = 0;
@@ -59,16 +60,18 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
                         GCCRDTItem rightdelimiter = o.rightDeleteGroup;
                         while (o != rightdelimiter) {
                             o.gc = true;
+                            o = (GCCRDTItem) o.right;
                         }
                     }
 
                     if (gcDelimiters.size() > 0) {
                         ArrayList<CRDTItemSerializable> gcDelimiterSerializable = new ArrayList<>();
                         for (GCCRDTItem i : gcDelimiters) {
+                            System.out.print(i.content + " ");
                             gcDelimiterSerializable.add(i.serialize());
                         }
+                        System.out.println();
                         // broadcast gc
-                        System.out.println("GC");
                         this.collaborate
                                 .broadcast(DataPayload.gcPayload(this.collaborate.shareID, gcDelimiterSerializable));
                     }
@@ -84,7 +87,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
     public GarbageCollectorManager(Collaborate collaborate) {
         this.lock = new ReentrantLock(true);
         this.collaborate = collaborate;
-        // this.start();
+        this.start();
     }
 
     public void setCrdt(GCCRDT crdt) {
@@ -108,7 +111,6 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             // collect conflicting or origin gc
             if (o.isGarbageCollectable() && o.gc) {
                 conflictGC.add(o);
-                o.gc = false;
             }
             o = (GCCRDTItem) o.right;
         }
@@ -117,7 +119,6 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             CRDTItem l = conflictGC.get(0);
             while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
                 conflictGC.add(0, (GCCRDTItem) l.left);
-                ((GCCRDTItem) l.left).gc = false;
                 if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
                     break;
                 }
@@ -127,7 +128,6 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
             CRDTItem r = conflictGC.get(conflictGC.size() - 1);
             while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
                 conflictGC.add((GCCRDTItem) r.right);
-                ((GCCRDTItem) r.right).gc = false;
                 if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
                     break;
                 }
@@ -136,6 +136,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         }
 
         for (GCCRDTItem i : conflictGC) {
+            i.gc = false;
             conflictGCSerialize.add(i.serialize());
         }
 
@@ -163,7 +164,6 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
         lock.lock();
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
-        System.out.println("SEND " + result.getSecond().content);
         this.collaborate.broadcast(DataPayload.deletePayload(this.collaborate.shareID,
                 result.getSecond().serialize()));
     }

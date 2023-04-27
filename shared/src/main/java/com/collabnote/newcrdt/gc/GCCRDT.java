@@ -45,7 +45,7 @@ public class GCCRDT extends CRDT {
     protected int findIndex(CRDTItem item) {
         return super.findIndex(item);
         // if (!this.clientReplica || this.start == item || this.start == null) {
-        //     return 0;
+        // return 0;
         // }
 
         // Marker marker = markerManager.marker;
@@ -56,35 +56,36 @@ public class GCCRDT extends CRDT {
         // // iterate right if possible
         // CRDTItem temp = null;
         // for (temp = p; item != temp && temp != null;) {
-        //     if (!temp.isDeleted() || temp == item) {
-        //         offset += 1;
-        //     } else if (temp.isDeleted()) {
-        //         // skips deleted group
-        //         temp = ((GCCRDTItem) temp).rightDeleteGroup;
-        //     }
-        //     temp = temp.right;
+        // if (!temp.isDeleted() || temp == item) {
+        // offset += 1;
+        // } else if (temp.isDeleted()) {
+        // // skips deleted group
+        // temp = ((GCCRDTItem) temp).rightDeleteGroup;
+        // }
+        // temp = temp.right;
         // }
 
         // // iterate left if right empty
         // if (temp == null) {
-        //     offset = 0;
-        //     for (temp = p; item != temp && temp != null;) {
-        //         if (!temp.isDeleted() || temp == item) {
-        //             offset -= 1;
-        //         } else if (temp.isDeleted()) {
-        //             temp = ((GCCRDTItem) temp).leftDeleteGroup;
-        //         }
-        //         temp = temp.left;
-        //     }
+        // offset = 0;
+        // for (temp = p; item != temp && temp != null;) {
+        // if (!temp.isDeleted() || temp == item) {
+        // offset -= 1;
+        // } else if (temp.isDeleted()) {
+        // temp = ((GCCRDTItem) temp).leftDeleteGroup;
+        // }
+        // temp = temp.left;
+        // }
 
-        //     if (temp == null) {
-        //         throw new NoSuchElementException("item gone");
-        //     }
+        // if (temp == null) {
+        // throw new NoSuchElementException("item gone");
+        // }
 
-        //     if (marker != null) {
-        //         markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
-        //         return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset - 1;
-        //     }
+        // if (marker != null) {
+        // markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
+        // return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset -
+        // 1;
+        // }
         // }
 
         // return marker != null ? marker.index + offset : offset;
@@ -241,10 +242,10 @@ public class GCCRDT extends CRDT {
         for (int i = 0; i < delimiters.size(); i += 2) {
             GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
-            if (((GCCRDTItem) gcItemLeftDelimiter.originRight).gc) {
+            if (gcItemLeftDelimiter.originRight != null && ((GCCRDTItem) gcItemLeftDelimiter.originRight).gc) {
                 gcItemLeftDelimiter.originRight = null;
             }
-            if (((GCCRDTItem) gcItemRightDelimiter.originLeft).gc) {
+            if (gcItemRightDelimiter.originLeft != null && ((GCCRDTItem) gcItemRightDelimiter.originLeft).gc) {
                 gcItemRightDelimiter.originLeft = null;
             }
         }
