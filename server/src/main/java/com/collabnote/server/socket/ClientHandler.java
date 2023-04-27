@@ -62,13 +62,13 @@ public class ClientHandler extends Thread {
                             break;
                         case DELETE:
                             if (this.state == ClientState.READY) {
-                                this.collaborate.broadcast(data);
+                                // this.collaborate.broadcast(data);
                                 this.collaborate.delete(data.getCrdtItem());
                             }
                             break;
                         case INSERT:
                             if (this.state == ClientState.READY) {
-                                this.collaborate.broadcast(data);
+                                // this.collaborate.broadcast(data);
                                 this.collaborate.insert(data.getCrdtItem());
                             }
                             break;

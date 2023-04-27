@@ -64,6 +64,11 @@ public class GCCRDTItem extends CRDTItem {
     @Override
     public void setDeleted() {
         super.setDeleted();
+        if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
+                || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
+            return;
+        }
+
         this.rightDeleteGroup = this.leftDeleteGroup = this;
 
         if (super.right != null && super.right.isDeleted() && ((GCCRDTItem) super.right).level == this.level) {
@@ -111,7 +116,7 @@ public class GCCRDTItem extends CRDTItem {
                         || gcItemLeft.rightDeleteGroup == gcItemRight)) {
 
             // find left delete group
-            GCCRDTItem oldLeftDeleteGroup = (GCCRDTItem) gcItemLeft.left;
+            GCCRDTItem oldLeftDeleteGroup = gcItemLeft;
             if (leftDeleteGroup != null && leftDeleteGroup.isDeleteGroupDelimiter()) {
                 oldLeftDeleteGroup = leftDeleteGroup;
             } else {

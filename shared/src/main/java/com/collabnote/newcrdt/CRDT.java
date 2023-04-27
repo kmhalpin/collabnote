@@ -40,12 +40,10 @@ public class CRDT {
 
     public CRDTItem bindItem(CRDTItemSerializable item, CRDTItem bitem) {
         if (item.originLeft != null
-                && item.originLeft.agent != item.id.agent
                 && !versionVector.exists(item.originLeft)) {
             return null;
         }
         if (item.originRight != null
-                && item.originRight.agent != item.id.agent
                 && !versionVector.exists(item.originRight)) {
             return null;
         }
@@ -82,9 +80,7 @@ public class CRDT {
             return 0;
         }
 
-        Marker marker = markerManager.marker;
-
-        CRDTItem p = marker != null ? marker.item : start;
+        CRDTItem p = start;
         int offset = 0;
 
         // iterate right if possible
@@ -98,6 +94,7 @@ public class CRDT {
 
         // iterate left if right empty
         if (temp == null) {
+            offset = 0;
             for (temp = p; item != temp && temp != null;) {
                 if (!temp.isDeleted() || temp == item) {
                     offset -= 1;
@@ -108,26 +105,21 @@ public class CRDT {
             if (temp == null) {
                 throw new NoSuchElementException("item gone");
             }
-
-            if (marker != null) {
-                markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
-                return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset - 1;
-            }
         }
 
-        return marker != null ? marker.index + offset : offset;
+        return offset;
     }
 
     protected Position findPosition(int index) {
         // check cache
-        Marker marker = markerManager.findMarker(this.start, index);
-        if (marker != null) {
-            Position pos = new Position(marker.item.left, marker.item, marker.index);
-            return findNextPosition(pos, index - marker.index);
-        } else {
-            Position pos = new Position(null, this.start, 0);
-            return findNextPosition(pos, index);
-        }
+        // Marker marker = markerManager.findMarker(this.start, index);
+        // if (marker != null) {
+        // Position pos = new Position(marker.item.left, marker.item, marker.index);
+        // return findNextPosition(pos, index - marker.index);
+        // } else {
+        Position pos = new Position(null, this.start, 0);
+        return findNextPosition(pos, index);
+        // }
     }
 
     Position findNextPosition(Position pos, int count) {
@@ -219,13 +211,16 @@ public class CRDT {
                     continue;
                 }
 
-                CRDTItem bitem = this.bindItem(item);
-                if (bitem != null) {
-                    remoteInsert(bitem, true);
-                    cont = true;
-                } else {
-                    missing.add(i);
+                if (versionVector.get(i.id.agent) == i.id.seq - 1) {
+                    CRDTItem bitem = this.bindItem(i);
+                    if (bitem != null) {
+                        remoteInsert(bitem, true);
+                        cont = true;
+                        continue;
+                    }
                 }
+
+                missing.add(i);
             }
 
             insertQueue = missing;
@@ -286,7 +281,7 @@ public class CRDT {
                     integrate(item);
                     if (newItem)
                         versionVector.put(item);
-                    return new Pair<Integer, CRDTItem>(newItem ? findIndex(item) : -1, item);
+                    return new Pair<Integer, CRDTItem>(newItem && !item.isDeleted() ? findIndex(item) : -1, item);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {

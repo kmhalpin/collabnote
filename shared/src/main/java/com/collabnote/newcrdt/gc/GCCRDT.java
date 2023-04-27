@@ -12,7 +12,6 @@ import com.collabnote.newcrdt.CRDTItem;
 import com.collabnote.newcrdt.CRDTItemSerializable;
 import com.collabnote.newcrdt.CRDTLocalListener;
 import com.collabnote.newcrdt.CRDTRemoteListener;
-import com.collabnote.newcrdt.Marker;
 
 public class GCCRDT extends CRDT {
     protected boolean clientReplica;
@@ -24,7 +23,7 @@ public class GCCRDT extends CRDT {
     }
 
     public GCCRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener) {
-        this(agent, remotelistener, localListener, false);
+        this(agent, remotelistener, localListener, true);
     }
 
     @Override
@@ -44,51 +43,51 @@ public class GCCRDT extends CRDT {
     // find index with optimized search, skips deleted group
     @Override
     protected int findIndex(CRDTItem item) {
-        if (!this.clientReplica || this.start == item || this.start == null) {
-            return 0;
-        }
+        return super.findIndex(item);
+        // if (!this.clientReplica || this.start == item || this.start == null) {
+        //     return 0;
+        // }
 
-        Marker marker = markerManager.marker;
+        // Marker marker = markerManager.marker;
 
-        CRDTItem p = marker != null ? marker.item : start;
-        int offset = 0;
+        // CRDTItem p = marker != null ? marker.item : start;
+        // int offset = 0;
 
-        // iterate right if possible
-        CRDTItem temp = null;
-        for (temp = p; item != temp && temp != null;) {
-            if (!temp.isDeleted() || temp == item) {
-                offset += 1;
-            } else if (temp.isDeleted()) {
-                // skips deleted group
-                temp = ((GCCRDTItem) temp).rightDeleteGroup.right;
-                continue;
-            }
-            temp = temp.right;
-        }
+        // // iterate right if possible
+        // CRDTItem temp = null;
+        // for (temp = p; item != temp && temp != null;) {
+        //     if (!temp.isDeleted() || temp == item) {
+        //         offset += 1;
+        //     } else if (temp.isDeleted()) {
+        //         // skips deleted group
+        //         temp = ((GCCRDTItem) temp).rightDeleteGroup;
+        //     }
+        //     temp = temp.right;
+        // }
 
-        // iterate left if right empty
-        if (temp == null) {
-            for (temp = p; item != temp && temp != null;) {
-                if (!temp.isDeleted() || temp == item) {
-                    offset -= 1;
-                } else if (temp.isDeleted()) {
-                    temp = ((GCCRDTItem) temp).leftDeleteGroup.left;
-                    continue;
-                }
-                temp = temp.left;
-            }
+        // // iterate left if right empty
+        // if (temp == null) {
+        //     offset = 0;
+        //     for (temp = p; item != temp && temp != null;) {
+        //         if (!temp.isDeleted() || temp == item) {
+        //             offset -= 1;
+        //         } else if (temp.isDeleted()) {
+        //             temp = ((GCCRDTItem) temp).leftDeleteGroup;
+        //         }
+        //         temp = temp.left;
+        //     }
 
-            if (temp == null) {
-                throw new NoSuchElementException("item gone");
-            }
+        //     if (temp == null) {
+        //         throw new NoSuchElementException("item gone");
+        //     }
 
-            if (marker != null) {
-                markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
-                return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset - 1;
-            }
-        }
+        //     if (marker != null) {
+        //         markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
+        //         return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset - 1;
+        //     }
+        // }
 
-        return marker != null ? marker.index + offset : offset;
+        // return marker != null ? marker.index + offset : offset;
     }
 
     // integrate with returning last conflicting delete group
@@ -124,7 +123,10 @@ public class GCCRDT extends CRDT {
                     if (o.id.agent < item.id.agent) {
                         left = o;
                         conflictingItems.clear();
-                    } else if (o.originRight.equals(item.originRight)) {
+                    } else if (o.originRight == item.originRight
+                            || (o.originRight != null && item.originRight != null
+                                    && o.originRight.id.agent == item.originRight.id.agent
+                                    && o.originRight.id.seq == item.originRight.id.seq)) {
                         break;
                     }
                 } else if (o.originLeft != null && itemsBeforeOrigin.contains(o.originLeft)) {
@@ -169,11 +171,6 @@ public class GCCRDT extends CRDT {
         }
     }
 
-    @Override
-    public void delete(CRDTItem item) {
-        super.delete(item);
-    }
-    
     @Override
     public CRDTItem localInsert(int pos, String value) {
         CRDTItem item = new GCCRDTItem(value,
@@ -297,9 +294,11 @@ public class GCCRDT extends CRDT {
         List<CRDTItemSerializable> list = new ArrayList<>();
         GCCRDTItem i = (GCCRDTItem) start;
         while (i != null) {
-            System.out.print("{ " + i.content + ", "
+            System.out.print("{ " + (i.originLeft != null ? (i.originLeft.id.agent + "-" + i.originLeft.id.seq) : null)
+                    + ", " + i.content + ", "
                     + (i.rightDeleteGroup != null && i.leftDeleteGroup != null ? "DG" : null) + ", "
                     + (i.isDeleted() ? "DELETED" : null) + ", " + i.level
+                    + ", " + (i.originRight != null ? (i.originRight.id.agent + "-" + i.originRight.id.seq) : null)
                     + " }");
             list.add((CRDTItemSerializable) i.serialize());
             i = (GCCRDTItem) i.right;

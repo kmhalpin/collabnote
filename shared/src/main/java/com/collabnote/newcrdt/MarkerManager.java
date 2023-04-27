@@ -2,6 +2,7 @@ package com.collabnote.newcrdt;
 
 // cache last local inserts, used to optimize local insert index finding, can be
 // updated every remote insert.
+// bug in marker system, find marker not returning correct position
 public class MarkerManager {
     public Marker marker;
 
@@ -59,21 +60,24 @@ public class MarkerManager {
         }
 
         CRDTItem i = marker.item;
-        {// adjust position to not pointing deleted item
-            while (i != null && (i.isDeleted())) {
-                i = i.left;
-                if (i != null && !i.isDeleted()) {
-                    index -= 1;
-                    // since i is not deleted loop will break
-                }
+        // adjust position to not pointing deleted item
+        while (i != null && (i.isDeleted())) {
+            i = i.left;
+            if (i != null && !i.isDeleted()) {
+                index -= 1;
+                // since i is not deleted loop will break
             }
-            if (i == null) {
-                marker = null;
-                return;
-            }
-            marker.item = i;
         }
+        if (i == null) {
+            marker = null;
+            System.out.println("REMOVE MARKER");
+            return;
+        }
+        marker.item = i;
+
         if (index < marker.index || (length > 0 && index == marker.index))
             marker.index = Math.max(index, marker.index + length);
+
+        System.out.println("UPDATE MARKER " + this.marker.index);
     }
 }

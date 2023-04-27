@@ -32,6 +32,7 @@ public class Collaborate {
     }
 
     public void delete(CRDTItemSerializable item) {
+        System.out.println("RECEIVE " + item.content);
         this.docMaster.tryRemoteDelete(item);
     }
 
