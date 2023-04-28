@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt;
+package com.collabnote.crdt;
 
 public class CRDTItem {
     public String content;

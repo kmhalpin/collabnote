@@ -8,10 +8,10 @@ import javax.swing.text.SimpleAttributeSet;
 
 import org.apache.commons.math3.util.Pair;
 
-import com.collabnote.newcrdt.CRDT;
-import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTRemoteListener;
-import com.collabnote.newcrdt.Transaction;
+import com.collabnote.crdt.CRDT;
+import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTRemoteListener;
+import com.collabnote.crdt.Transaction;
 
 public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteListener {
     private CRDT crdt;

@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt;
+package com.collabnote.crdt;
 
 import java.util.ArrayList;
 import java.util.HashSet;

@@ -3,7 +3,7 @@ package com.collabnote.socket;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-import com.collabnote.newcrdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTItemSerializable;
 
 public class DataPayload implements Serializable {
     private int agent;

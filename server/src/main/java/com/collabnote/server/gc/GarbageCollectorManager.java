@@ -6,14 +6,14 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.math3.util.Pair;
 
-import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTItemSerializable;
-import com.collabnote.newcrdt.CRDTRemoteListener;
-import com.collabnote.newcrdt.gc.GCCRDT;
-import com.collabnote.newcrdt.gc.GCCRDTItem;
+import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTRemoteListener;
+import com.collabnote.crdt.Transaction;
+import com.collabnote.crdt.gc.GCCRDT;
+import com.collabnote.crdt.gc.GCCRDTItem;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.socket.DataPayload;
-import com.collabnote.newcrdt.Transaction;
 
 public class GarbageCollectorManager extends Thread implements CRDTRemoteListener {
     private ReentrantLock lock;
@@ -39,7 +39,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteListene
                             opsCounter++;
                         } else if (ops.isDeleteGroupDelimiter()
                                 && ops.leftDeleteGroup != ops.rightDeleteGroup // skip standalone delimiter
-                                && !ops.leftDeleteGroup.gc && !ops.rightDeleteGroup.gc) {
+                        ) {
                             isInsideDeleteGroup = !isInsideDeleteGroup;
                             if (isInsideDeleteGroup) { // right delimiter
                                 opsCounter = 0;

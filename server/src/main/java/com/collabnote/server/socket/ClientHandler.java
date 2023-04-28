@@ -5,7 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import com.collabnote.newcrdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.server.collaborate.CollaborateDatabase;
 import com.collabnote.socket.DataPayload;

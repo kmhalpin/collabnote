@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt;
+package com.collabnote.crdt;
 
 import org.apache.commons.math3.util.Pair;
 

@@ -12,7 +12,7 @@ import com.collabnote.client.Controller;
 
 public class Menu extends JMenuBar {
     JMenu fileMenu, editMenu, accountMenu;
-    JMenuItem fileNewItem, fileShareItem, fileConnectItem, accountPrint;
+    JMenuItem fileNewItem, fileShareItem, fileConnectItem, accountPrint, accountOfflineToggle;
 
     public Menu(Controller controller) {
         fileMenu = new JMenu("File");
@@ -59,7 +59,11 @@ public class Menu extends JMenuBar {
             }
         });
 
+        accountOfflineToggle = new JMenuItem("Offline Mode");
+        accountOfflineToggle.addActionListener(null);
+
         accountMenu.add(accountPrint);
+        accountMenu.add(accountOfflineToggle);
 
         add(fileMenu);
         add(editMenu);

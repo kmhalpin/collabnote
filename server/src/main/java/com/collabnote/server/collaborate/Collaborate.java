@@ -3,8 +3,8 @@ package com.collabnote.server.collaborate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.collabnote.newcrdt.CRDTItemSerializable;
-import com.collabnote.newcrdt.gc.GCCRDT;
+import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.server.gc.GarbageCollectorManager;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;

@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt;
+package com.collabnote.crdt;
 
 // cache last local inserts, used to optimize local insert index finding, can be
 // updated every remote insert.

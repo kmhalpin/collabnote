@@ -1,10 +1,10 @@
-package com.collabnote.newcrdt.gc;
+package com.collabnote.crdt.gc;
 
 import java.util.NoSuchElementException;
 
-import com.collabnote.newcrdt.CRDTID;
-import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTID;
+import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
 
 public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;

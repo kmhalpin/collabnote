@@ -7,11 +7,11 @@ import com.collabnote.client.documentcrdt.CRDTDocument;
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.MainFrame;
-import com.collabnote.newcrdt.CRDT;
-import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTItemSerializable;
-import com.collabnote.newcrdt.CRDTLocalListener;
-import com.collabnote.newcrdt.gc.GCCRDT;
+import com.collabnote.crdt.CRDT;
+import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTLocalListener;
+import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.socket.DataPayload;
 import com.collabnote.socket.Type;
 

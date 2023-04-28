@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt.gc;
+package com.collabnote.crdt.gc;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -6,12 +6,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import com.collabnote.newcrdt.CRDT;
-import com.collabnote.newcrdt.CRDTID;
-import com.collabnote.newcrdt.CRDTItem;
-import com.collabnote.newcrdt.CRDTItemSerializable;
-import com.collabnote.newcrdt.CRDTLocalListener;
-import com.collabnote.newcrdt.CRDTRemoteListener;
+import com.collabnote.crdt.CRDT;
+import com.collabnote.crdt.CRDTID;
+import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTLocalListener;
+import com.collabnote.crdt.CRDTRemoteListener;
 
 public class GCCRDT extends CRDT {
     protected boolean clientReplica;

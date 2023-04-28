@@ -1,4 +1,4 @@
-package com.collabnote.newcrdt;
+package com.collabnote.crdt;
 
 public interface CRDTRemoteListener {
     public void onRemoteCRDTInsert(Transaction transaction);
