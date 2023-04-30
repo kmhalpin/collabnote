@@ -1,7 +1,7 @@
 package com.collabnote.socket;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.List;
 
 import com.collabnote.crdt.CRDTItemSerializable;
 
@@ -10,32 +10,36 @@ public class DataPayload implements Serializable {
     private Type type;
     private String shareID;
     private CRDTItemSerializable crdtItem;
-    private ArrayList<CRDTItemSerializable> crdtList;
+    private List<CRDTItemSerializable> crdtList;
     private int caretIndex;
 
     public static DataPayload insertPayload(String shareID, CRDTItemSerializable crdtItem) {
         return new DataPayload(Type.INSERT, shareID, crdtItem, 0, null);
     }
 
-    public static DataPayload deletePayload(String shareID, CRDTItemSerializable crdtItem) {
-        return new DataPayload(Type.DELETE, shareID, crdtItem, 0, null);
+    public static DataPayload deletePayload(String shareID, CRDTItemSerializable item) {
+        return new DataPayload(Type.DELETE, shareID, item, 0, null);
+    }
+
+    public static DataPayload donePayload(CRDTItemSerializable item) {
+        return new DataPayload(Type.DONE, null, item, 0, null);
     }
 
     public static DataPayload caretPayload(String shareID, int caretIndex) {
         return new DataPayload(Type.CARET, shareID, null, caretIndex, null);
     }
 
-    public static DataPayload gcPayload(String shareID, ArrayList<CRDTItemSerializable> items) {
+    public static DataPayload gcPayload(String shareID, List<CRDTItemSerializable> items) {
         return new DataPayload(Type.GC, shareID, null, 0, items);
     }
 
     public static DataPayload recoverPayload(String shareID, CRDTItemSerializable insertItem,
-            ArrayList<CRDTItemSerializable> items) {
+            List<CRDTItemSerializable> items) {
         return new DataPayload(Type.RECOVER, shareID, insertItem, 0, items);
     }
 
     public DataPayload(Type type, String shareID, CRDTItemSerializable crdtItem, int caretIndex,
-            ArrayList<CRDTItemSerializable> crdtList) {
+            List<CRDTItemSerializable> crdtList) {
         this.type = type;
         this.shareID = shareID;
         this.crdtItem = crdtItem;
@@ -67,7 +71,7 @@ public class DataPayload implements Serializable {
         return caretIndex;
     }
 
-    public ArrayList<CRDTItemSerializable> getCrdtList() {
+    public List<CRDTItemSerializable> getCrdtList() {
         return crdtList;
     }
 }

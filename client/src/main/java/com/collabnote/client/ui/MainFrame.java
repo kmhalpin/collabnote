@@ -4,7 +4,8 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.GroupLayout.Alignment;
 
-import com.collabnote.client.Controller;
+import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
@@ -24,24 +25,18 @@ public class MainFrame extends JFrame {
     private GroupLayout gLayout;
     private EditorPanel editorPanel;
 
-    public MainFrame(Controller controller) {
+    public MainFrame() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        setJMenuBar(new Menu(controller));
+        CRDTDocument document = new CRDTDocument();
+        TextEditorViewModel viewModel = new TextEditorViewModel(document);
+
+        setJMenuBar(new Menu(viewModel, document));
 
         gLayout = new GroupLayout(getContentPane());
         getContentPane().setLayout(gLayout);
 
-        newEditorPanel(controller);
-
-        pack();
-    }
-
-    public void newEditorPanel(Controller controller) {
-        if (editorPanel != null)
-            getContentPane().remove(editorPanel);
-
-        editorPanel = new EditorPanel(controller);
+        editorPanel = new EditorPanel(viewModel, document);
 
         gLayout.setHorizontalGroup(
                 gLayout.createSequentialGroup()
@@ -55,10 +50,8 @@ public class MainFrame extends JFrame {
                         .addComponent(editorPanel));
 
         getContentPane().add(editorPanel);
-    }
 
-    public EditorPanel getEditorPanel() {
-        return editorPanel;
+        pack();
     }
 
 }

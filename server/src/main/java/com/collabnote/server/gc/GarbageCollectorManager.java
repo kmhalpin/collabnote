@@ -8,14 +8,14 @@ import org.apache.commons.math3.util.Pair;
 
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
-import com.collabnote.crdt.CRDTRemoteListener;
+import com.collabnote.crdt.CRDTRemoteTransaction;
 import com.collabnote.crdt.Transaction;
 import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.crdt.gc.GCCRDTItem;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.socket.DataPayload;
 
-public class GarbageCollectorManager extends Thread implements CRDTRemoteListener {
+public class GarbageCollectorManager extends Thread implements CRDTRemoteTransaction {
     private ReentrantLock lock;
     private GCCRDT crdt;
     private Collaborate collaborate;

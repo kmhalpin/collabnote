@@ -2,19 +2,23 @@ package com.collabnote.client.ui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 
+import javax.swing.JFileChooser;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 
-import com.collabnote.client.Controller;
+import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 public class Menu extends JMenuBar {
-    JMenu fileMenu, editMenu, accountMenu;
-    JMenuItem fileNewItem, fileShareItem, fileConnectItem, accountPrint, accountOfflineToggle;
+    private JMenu fileMenu, editMenu, accountMenu;
+    private JMenuItem fileNewItem, fileSaveItem, fileLoadItem, fileShareItem, fileConnectItem, accountPrint,
+            accountOfflineToggle;
 
-    public Menu(Controller controller) {
+    public Menu(TextEditorViewModel viewModel, CRDTDocument crdtDocument) {
         fileMenu = new JMenu("File");
         editMenu = new JMenu("Edit");
         accountMenu = new JMenu("Account");
@@ -23,7 +27,39 @@ public class Menu extends JMenuBar {
         fileNewItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                controller.newNote();
+                viewModel.initDocument(crdtDocument);
+            }
+        });
+
+        fileSaveItem = new JMenuItem("Save File");
+        fileSaveItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setDialogTitle("Save document");
+                fileChooser.setFileFilter(new FileTypeFilter(".txt", "Collaborative Document"));
+
+                int result = fileChooser.showSaveDialog(null);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    File file = fileChooser.getSelectedFile();
+                    viewModel.saveDocument(file);
+                }
+            }
+        });
+
+        fileLoadItem = new JMenuItem("Load File");
+        fileLoadItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setDialogTitle("Load document");
+                fileChooser.setFileFilter(new FileTypeFilter(".txt", "Collaborative Document"));
+
+                int result = fileChooser.showOpenDialog(null);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    File file = fileChooser.getSelectedFile();
+                    viewModel.loadDocument(crdtDocument, file);
+                }
             }
         });
 
@@ -32,7 +68,8 @@ public class Menu extends JMenuBar {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String host = JOptionPane.showInputDialog("Enter collaboration server host");
-                controller.shareNote(host);
+                if (!host.isEmpty())
+                    viewModel.shareDocument(host);
             }
         });
 
@@ -42,11 +79,14 @@ public class Menu extends JMenuBar {
             public void actionPerformed(ActionEvent e) {
                 String host = JOptionPane.showInputDialog("Enter collaboration server host");
                 String shareID = JOptionPane.showInputDialog("Enter collaboration ID");
-                controller.connectNote(host, shareID);
+                if (!host.isEmpty() && !shareID.isEmpty())
+                    viewModel.connectDocument(crdtDocument, host, shareID);
             }
         });
 
         fileMenu.add(fileNewItem);
+        fileMenu.add(fileSaveItem);
+        fileMenu.add(fileLoadItem);
         fileMenu.add(fileShareItem);
         fileMenu.add(fileConnectItem);
 
@@ -55,7 +95,7 @@ public class Menu extends JMenuBar {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                controller.printCRDT();
+                // controller.printCRDT();
             }
         });
 

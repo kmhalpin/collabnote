@@ -11,18 +11,18 @@ import com.collabnote.crdt.CRDTID;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.crdt.CRDTLocalListener;
-import com.collabnote.crdt.CRDTRemoteListener;
+import com.collabnote.crdt.CRDTRemoteTransaction;
 
 public class GCCRDT extends CRDT {
     protected boolean clientReplica;
 
-    public GCCRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener,
+    public GCCRDT(int agent, CRDTRemoteTransaction remotelistener, CRDTLocalListener localListener,
             boolean clientReplica) {
         super(agent, remotelistener, localListener);
         this.clientReplica = clientReplica;
     }
 
-    public GCCRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener) {
+    public GCCRDT(int agent, CRDTRemoteTransaction remotelistener, CRDTLocalListener localListener) {
         this(agent, remotelistener, localListener, true);
     }
 
@@ -186,7 +186,7 @@ public class GCCRDT extends CRDT {
 
     // client gc items expected marked and sorted by deleted group first
     // runs by network thread
-    public void GC(ArrayList<CRDTItemSerializable> item) {
+    public void GC(List<CRDTItemSerializable> item) {
         ArrayList<GCCRDTItem> delimiters = new ArrayList<>();
 
         for (CRDTItemSerializable i : item) {
@@ -253,7 +253,7 @@ public class GCCRDT extends CRDT {
 
     // client recover can be run concurrently
     // runs by network thread
-    public void recover(ArrayList<CRDTItemSerializable> recoverItems, CRDTItemSerializable item) {
+    public void recover(List<CRDTItemSerializable> recoverItems, CRDTItemSerializable item) {
         // expected will 0
         while (recoverItems.size() > 0) {
             ArrayList<CRDTItemSerializable> missing = new ArrayList<>();

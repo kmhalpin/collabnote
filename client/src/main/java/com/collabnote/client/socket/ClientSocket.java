@@ -64,8 +64,4 @@ public class ClientSocket implements Closeable {
         } catch (IOException e) {
         }
     }
-
-    public boolean isRunning() {
-        return this.networkThread.isAlive();
-    }
 }

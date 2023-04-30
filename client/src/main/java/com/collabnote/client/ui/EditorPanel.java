@@ -1,6 +1,8 @@
 package com.collabnote.client.ui;
 
-import com.collabnote.client.Controller;
+import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
+import com.collabnote.client.viewmodel.TextEditorViewModelListener;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -11,24 +13,25 @@ import javax.swing.text.BadLocationException;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.util.HashMap;
 
-public class EditorPanel extends JPanel {
-    private HashMap<Integer, Object> carets;
+public class EditorPanel extends JPanel implements TextEditorViewModelListener {
     private JTextArea textArea;
     private CaretHighlighter highlighter;
+    private CRDTDocument document;
 
-    public EditorPanel(Controller controller) {
-        carets = new HashMap<>();
-        textArea = new JTextArea(controller.getDocument(), null, 30, 40);
-        highlighter = new CaretHighlighter(Color.RED);
-        highlighter.setDrawsLayeredHighlights(true);
-        textArea.setHighlighter(highlighter);
+    public EditorPanel(TextEditorViewModel viewModel, CRDTDocument crdtDocument) {
+        viewModel.setListener(this);
+
+        this.document = crdtDocument;
+        this.textArea = new JTextArea(document, null, 30, 40);
+        this.highlighter = new CaretHighlighter(Color.RED);
+        this.highlighter.setDrawsLayeredHighlights(true);
+        this.textArea.setHighlighter(highlighter);
 
         textArea.addCaretListener(new CaretListener() {
             @Override
             public void caretUpdate(CaretEvent e) {
-                controller.updateCaret(e.getDot());
+                viewModel.updateCaret(e.getDot());
             }
         });
 
@@ -40,24 +43,15 @@ public class EditorPanel extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
     }
 
-    public void updateCaret(int agent, int index) {
-        if (index == -1) {
-            Object tag = carets.remove(agent);
-            if (tag != null)
-                highlighter.removeHighlight(tag);
-            return;
-        }
+    @Override
+    public Object addCaretListener(int index) throws BadLocationException {
+        if (index == 0 || document.getText(index - 1, 1).equals("\n"))
+            return highlighter.addHighlight(index, index + 1);
+        return highlighter.addHighlight(index - 1, index);
+    }
 
-        Object tag = carets.get(agent);
-        if (tag != null)
-            highlighter.removeHighlight(tag);
-        try {
-            if (index == 0 || textArea.getDocument().getText(index - 1, 1).equals("\n")) {
-                carets.put(agent, highlighter.addHighlight(index, index + 1));
-            } else {
-                carets.put(agent, highlighter.addHighlight(index - 1, index));
-            }
-        } catch (BadLocationException e1) {
-        }
+    @Override
+    public void removeCaretListener(Object tag) {
+        this.highlighter.removeHighlight(tag);
     }
 }

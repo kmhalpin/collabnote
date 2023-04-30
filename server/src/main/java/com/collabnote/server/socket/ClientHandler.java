@@ -64,12 +64,14 @@ public class ClientHandler extends Thread {
                             if (this.state == ClientState.READY) {
                                 // this.collaborate.broadcast(data);
                                 this.collaborate.delete(data.getCrdtItem());
+                                sendData(DataPayload.donePayload(data.getCrdtItem()));
                             }
                             break;
                         case INSERT:
                             if (this.state == ClientState.READY) {
                                 // this.collaborate.broadcast(data);
                                 this.collaborate.insert(data.getCrdtItem());
+                                sendData(DataPayload.donePayload(data.getCrdtItem()));
                             }
                             break;
                         case DONE:

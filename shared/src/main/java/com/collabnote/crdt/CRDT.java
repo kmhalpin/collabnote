@@ -23,11 +23,11 @@ public class CRDT {
     protected VersionVectors versionVector;
     protected CRDTItem start;
 
-    protected CRDTRemoteListener remotelistener;
+    protected CRDTRemoteTransaction remoteTransaction;
     protected CRDTLocalListener localListener;
 
-    public CRDT(int agent, CRDTRemoteListener remotelistener, CRDTLocalListener localListener) {
-        this.remotelistener = remotelistener;
+    public CRDT(int agent, CRDTRemoteTransaction remoteTransaction, CRDTLocalListener localListener) {
+        this.remoteTransaction = remoteTransaction;
         this.localListener = localListener;
         this.agent = agent;
         this.markerManager = new MarkerManager();
@@ -250,7 +250,7 @@ public class CRDT {
 
     protected void delete(CRDTItem item) {
         if (!item.isDeleted()) {
-            this.remotelistener.onRemoteCRDTDelete(new Transaction() {
+            this.remoteTransaction.onRemoteCRDTDelete(new Transaction() {
 
                 @Override
                 public Pair<Integer, CRDTItem> execute() {
@@ -272,7 +272,7 @@ public class CRDT {
     }
 
     public void remoteInsert(CRDTItem item, boolean newItem) {
-        this.remotelistener.onRemoteCRDTInsert(new Transaction() {
+        this.remoteTransaction.onRemoteCRDTInsert(new Transaction() {
 
             @Override
             public Pair<Integer, CRDTItem> execute() {

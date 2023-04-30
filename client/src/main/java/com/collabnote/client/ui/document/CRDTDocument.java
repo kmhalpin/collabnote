@@ -1,4 +1,4 @@
-package com.collabnote.client.documentcrdt;
+package com.collabnote.client.ui.document;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -10,10 +10,10 @@ import org.apache.commons.math3.util.Pair;
 
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItem;
-import com.collabnote.crdt.CRDTRemoteListener;
+import com.collabnote.crdt.CRDTRemoteTransaction;
 import com.collabnote.crdt.Transaction;
 
-public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteListener {
+public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteTransaction {
     private CRDT crdt;
 
     public void setCrdt(CRDT crdt) {
