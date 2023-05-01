@@ -31,7 +31,9 @@ public class MainFrame extends JFrame {
         CRDTDocument document = new CRDTDocument();
         TextEditorViewModel viewModel = new TextEditorViewModel(document);
 
-        setJMenuBar(new Menu(viewModel, document));
+        Menu menu = new Menu(viewModel, document);
+
+        setJMenuBar(menu);
 
         gLayout = new GroupLayout(getContentPane());
         getContentPane().setLayout(gLayout);

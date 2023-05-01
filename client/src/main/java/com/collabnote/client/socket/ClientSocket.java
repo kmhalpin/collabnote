@@ -14,6 +14,7 @@ public class ClientSocket implements Closeable {
     private Socket clientSocket = null;
     private boolean closed = false;
     private ObjectOutputStream writer = null;
+
     private int agent;
 
     public ClientSocket(String host, int agent, ClientSocketListener clientSocketListener) {
@@ -40,6 +41,8 @@ public class ClientSocket implements Closeable {
                 }
                 writer = null;
                 closed = true;
+                clientSocket = null;
+                networkThread = null;
                 clientSocketListener.onFinished();
             }
         });

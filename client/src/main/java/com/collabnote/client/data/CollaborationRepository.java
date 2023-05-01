@@ -64,8 +64,10 @@ public class CollaborationRepository {
                 if (isReady || data.getType() == Type.INSERT || data.getType() == Type.DELETE)
                     mainListener.onReceiveData(data);
 
-                if (data.getType() == Type.CONNECT)
+                if (data.getType() == Type.CONNECT) {
                     isReady = true;
+                    mainListener.onReceiveData(data);
+                }
             }
 
             @Override

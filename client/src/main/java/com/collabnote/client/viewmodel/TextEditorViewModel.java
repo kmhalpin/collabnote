@@ -27,7 +27,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     private CollaborationRepository collaborationRepository;
     private DocumentModel documentModel;
-    private TextEditorViewModelListener listener;
+
+    // data listener
+    private TextEditorViewModelCaretListener caretListener;
+    private TextEditorViewModelCollaborationListener collaborationListener;
 
     private DocumentEntity documentEntity;
 
@@ -37,8 +40,12 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         this.initDocument(document);
     }
 
-    public void setListener(TextEditorViewModelListener listener) {
-        this.listener = listener;
+    public void setCollaborationListener(TextEditorViewModelCollaborationListener collaborationListener) {
+        this.collaborationListener = collaborationListener;
+    }
+
+    public void setCaretListener(TextEditorViewModelCaretListener caretListener) {
+        this.caretListener = caretListener;
     }
 
     // create new document
@@ -72,7 +79,22 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         this.documentModel.loadFile(entity, targetFile);
 
         if (entity.isCollaborating()) {
-            collaborationRepository.connectCRDT(entity.getServerHost(), entity.getShareID(), this.agent, this);
+            this.collaborationRepository.connectCRDT(entity.getServerHost(), entity.getShareID(), this.agent, this);
+        }
+    }
+
+    public void toggleConnection() {
+        if (this.documentEntity == null) {
+            return;
+        }
+
+        if (this.documentEntity.isCollaborating()) {
+            if (this.collaborationRepository.isConnected()) {
+                this.collaborationRepository.closeConnection();
+            } else {
+                this.collaborationRepository.connectCRDT(this.documentEntity.getServerHost(),
+                        this.documentEntity.getShareID(), this.agent, this);
+            }
         }
     }
 
@@ -137,7 +159,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     public void onReceiveData(DataPayload data) {
         switch (data.getType()) {
             case CARET:
-                if (this.listener == null)
+                if (this.caretListener == null)
                     return;
 
                 int index = data.getCaretIndex();
@@ -146,15 +168,15 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 if (index == -1) {
                     Object tag = this.userCarets.remove(agent);
                     if (tag != null)
-                        this.listener.removeCaretListener(tag);
+                        this.caretListener.removeCaretListener(tag);
                     return;
                 }
 
                 Object tag = this.userCarets.get(agent);
                 if (tag != null)
-                    this.listener.removeCaretListener(tag);
+                    this.caretListener.removeCaretListener(tag);
                 try {
-                    this.userCarets.put(agent, this.listener.addCaretListener(index));
+                    this.userCarets.put(agent, this.caretListener.addCaretListener(index));
                 } catch (BadLocationException e1) {
                 }
                 break;
@@ -164,14 +186,23 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             case INSERT:
                 this.documentEntity.getCrdtReplica().tryRemoteInsert(data.getCrdtItem());
                 break;
+            // acknowledge sent
             case DONE:
                 // check
-                this.documentEntity.getOperationBuffer().remove(data.getCrdtItem());
+                System.out.println("ACK: " + data.getCrdtItem().content + " "
+                        + this.documentEntity.getOperationBuffer().remove(data.getCrdtItem()));
                 break;
+            // after connected
             case CONNECT:
+                for (CRDTItemSerializable i : this.documentEntity.getOperationBuffer()) {
+                    this.collaborationRepository.sendInsert(this.documentEntity.getShareID(), i);
+                }
+                this.collaborationListener.collaborationStatusListener(true);
                 break;
+            // after shared
             case SHARE:
                 this.documentEntity.setShareID(data.getShareID());
+                this.collaborationListener.collaborationStatusListener(true);
                 break;
             case GC:
                 ((GCCRDT) this.documentEntity.getCrdtReplica()).GC(data.getCrdtList());
@@ -186,6 +217,6 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     @Override
     public void onFinished() {
-        // TODO Auto-generated method stub
+        this.collaborationListener.collaborationStatusListener(false);
     }
 }

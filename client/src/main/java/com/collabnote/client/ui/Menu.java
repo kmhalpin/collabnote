@@ -12,13 +12,16 @@ import javax.swing.JOptionPane;
 
 import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
+import com.collabnote.client.viewmodel.TextEditorViewModelCollaborationListener;
 
-public class Menu extends JMenuBar {
+public class Menu extends JMenuBar implements TextEditorViewModelCollaborationListener {
     private JMenu fileMenu, editMenu, accountMenu;
     private JMenuItem fileNewItem, fileSaveItem, fileLoadItem, fileShareItem, fileConnectItem, accountPrint,
             accountOfflineToggle;
 
     public Menu(TextEditorViewModel viewModel, CRDTDocument crdtDocument) {
+        viewModel.setCollaborationListener(this);
+
         fileMenu = new JMenu("File");
         editMenu = new JMenu("Edit");
         accountMenu = new JMenu("Account");
@@ -100,7 +103,14 @@ public class Menu extends JMenuBar {
         });
 
         accountOfflineToggle = new JMenuItem("Offline Mode");
-        accountOfflineToggle.addActionListener(null);
+        accountOfflineToggle.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewModel.toggleConnection();
+            }
+
+        });
 
         accountMenu.add(accountPrint);
         accountMenu.add(accountOfflineToggle);
@@ -108,5 +118,10 @@ public class Menu extends JMenuBar {
         add(fileMenu);
         add(editMenu);
         add(accountMenu);
+    }
+
+    @Override
+    public void collaborationStatusListener(boolean status) {
+        this.accountOfflineToggle.setText(status ? "Offline Mode" : "Online Mode");
     }
 }

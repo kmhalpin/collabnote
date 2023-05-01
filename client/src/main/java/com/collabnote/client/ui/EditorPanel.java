@@ -2,7 +2,7 @@ package com.collabnote.client.ui;
 
 import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
-import com.collabnote.client.viewmodel.TextEditorViewModelListener;
+import com.collabnote.client.viewmodel.TextEditorViewModelCaretListener;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -14,13 +14,13 @@ import javax.swing.text.BadLocationException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 
-public class EditorPanel extends JPanel implements TextEditorViewModelListener {
+public class EditorPanel extends JPanel implements TextEditorViewModelCaretListener {
     private JTextArea textArea;
     private CaretHighlighter highlighter;
     private CRDTDocument document;
 
     public EditorPanel(TextEditorViewModel viewModel, CRDTDocument crdtDocument) {
-        viewModel.setListener(this);
+        viewModel.setCaretListener(this);
 
         this.document = crdtDocument;
         this.textArea = new JTextArea(document, null, 30, 40);
