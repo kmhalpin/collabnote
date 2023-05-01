@@ -196,6 +196,8 @@ public class CRDT {
 
     public void tryRemoteInsert(CRDTItemSerializable item) {
         if (versionVector.exists(item.id)) {
+            if (item.isDeleted)
+                tryRemoteDelete(item);
             return;
         }
 
@@ -208,6 +210,8 @@ public class CRDT {
 
             for (CRDTItemSerializable i : insertQueue) {
                 if (versionVector.exists(i.id)) {
+                    if (i.isDeleted)
+                        tryRemoteDelete(i);
                     continue;
                 }
 

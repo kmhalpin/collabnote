@@ -23,6 +23,7 @@ import com.collabnote.socket.DataPayload;
 public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListener {
     // user id
     private int agent = RandomUtils.nextInt();
+    private HashMap<Integer, Object> userCarets;
 
     private CollaborationRepository collaborationRepository;
     private DocumentModel documentModel;
@@ -42,7 +43,11 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     // create new document
     public DocumentEntity initDocument(CRDTDocument document) {
+        if (this.collaborationRepository.isConnected())
+            this.collaborationRepository.closeConnection();
+
         this.documentEntity = new DocumentEntity(new GCCRDT(0, document, this));
+        this.userCarets = new HashMap<>();
 
         try {
             document.remove(0, document.getLength());
@@ -64,7 +69,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     public void loadDocument(CRDTDocument document, File targetFile) {
         DocumentEntity entity = initDocument(document);
-        this.documentModel.loadFile(entity.getCrdtReplica(), targetFile);
+        this.documentModel.loadFile(entity, targetFile);
 
         if (entity.isCollaborating()) {
             collaborationRepository.connectCRDT(entity.getServerHost(), entity.getShareID(), this.agent, this);
@@ -76,7 +81,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             return;
         }
 
-        this.documentEntity.setCollaboration(null, host, new HashMap<>(), new ArrayList<>());
+        this.documentEntity.setCollaboration(null, host, new ArrayList<>());
 
         collaborationRepository.shareCRDT(this.documentEntity.getCrdtReplica(), host, this.agent, this);
     }
@@ -84,7 +89,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     public void connectDocument(CRDTDocument document, String host, String shareID) {
         DocumentEntity entity = initDocument(document);
 
-        entity.setCollaboration(shareID, host, new HashMap<>(), new ArrayList<>());
+        entity.setCollaboration(shareID, host, new ArrayList<>());
 
         collaborationRepository.connectCRDT(host, shareID, this.agent, this);
     }
@@ -139,17 +144,17 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 int agent = data.getAgent();
 
                 if (index == -1) {
-                    Object tag = this.documentEntity.getUserCarets().remove(agent);
+                    Object tag = this.userCarets.remove(agent);
                     if (tag != null)
                         this.listener.removeCaretListener(tag);
                     return;
                 }
 
-                Object tag = this.documentEntity.getUserCarets().get(agent);
+                Object tag = this.userCarets.get(agent);
                 if (tag != null)
                     this.listener.removeCaretListener(tag);
                 try {
-                    this.documentEntity.getUserCarets().put(agent, this.listener.addCaretListener(index));
+                    this.userCarets.put(agent, this.listener.addCaretListener(index));
                 } catch (BadLocationException e1) {
                 }
                 break;
@@ -160,6 +165,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 this.documentEntity.getCrdtReplica().tryRemoteInsert(data.getCrdtItem());
                 break;
             case DONE:
+                // check
                 this.documentEntity.getOperationBuffer().remove(data.getCrdtItem());
                 break;
             case CONNECT:

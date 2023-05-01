@@ -9,7 +9,6 @@ import java.io.ObjectOutputStream;
 
 import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.client.data.entity.DocumentEntitySerializable;
-import com.collabnote.crdt.CRDT;
 
 public class DocumentModel {
     public void saveFile(DocumentEntity documentEntity, File targetFile) {
@@ -23,16 +22,15 @@ public class DocumentModel {
         }
     }
 
-    public DocumentEntity loadFile(CRDT crdt, File targetFile) {
+    public void loadFile(DocumentEntity entity, File targetFile) {
         try (FileInputStream fileInputStream = new FileInputStream(targetFile);
                 ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);) {
             DocumentEntitySerializable document = (DocumentEntitySerializable) objectInputStream.readObject();
-            return document.deserialize(crdt);
+            document.deserialize(entity);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        return null;
     }
 }
