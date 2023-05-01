@@ -9,12 +9,12 @@ public class CRDTItem {
     public CRDTItem left;
     public CRDTItem right;
 
-    public CRDTItem(String content, CRDTID id, CRDTItem originLeft, CRDTItem originRight, boolean isDeleted,
+    public CRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
         this.content = content;
         this.id = id;
-        this.originLeft = originLeft;
-        this.originRight = originRight;
+        this.originLeft = null;
+        this.originRight = null;
         this.isDeleted = isDeleted;
         this.left = left;
         this.right = right;

@@ -31,8 +31,6 @@ public class GCCRDT extends CRDT {
         GCCRDTItem bitem = new GCCRDTItem(
                 item.content,
                 item.id,
-                null,
-                null,
                 item.isDeleted,
                 null,
                 null);
@@ -176,8 +174,6 @@ public class GCCRDT extends CRDT {
     public CRDTItem localInsert(int pos, String value) {
         CRDTItem item = new GCCRDTItem(value,
                 new CRDTID(agent, versionVector.get(agent) + 1),
-                null,
-                null,
                 false,
                 null,
                 null);

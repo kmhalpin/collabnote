@@ -101,13 +101,13 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         GCCRDTItem o;
 
         // start from left origin
-        if (item.originLeft != null) {
-            o = (GCCRDTItem) item.originLeft;
+        if (item.getOriginLeft() != null) {
+            o = (GCCRDTItem) item.getOriginLeft();
         } else {
             o = (GCCRDTItem) this.crdt.getStart();
         }
 
-        while (o != null && ((item.originRight != null && o != item.originRight.right) || o != null)) {
+        while (o != null && ((item.getOriginRight() != null && o != item.getOriginRight().right) || o != null)) {
             // collect conflicting or origin gc
             if (o.isGarbageCollectable() && o.gc) {
                 conflictGC.add(o);

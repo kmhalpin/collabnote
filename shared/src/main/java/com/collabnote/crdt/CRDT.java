@@ -64,8 +64,6 @@ public class CRDT {
         CRDTItem bitem = new CRDTItem(
                 item.content,
                 item.id,
-                null,
-                null,
                 item.isDeleted,
                 null,
                 null);
@@ -139,8 +137,6 @@ public class CRDT {
     public CRDTItem localInsert(int pos, String value) {
         CRDTItem item = new CRDTItem(value,
                 new CRDTID(agent, versionVector.get(agent) + 1),
-                null,
-                null,
                 false,
                 null,
                 null);

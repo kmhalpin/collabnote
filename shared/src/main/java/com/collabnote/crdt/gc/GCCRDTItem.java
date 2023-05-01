@@ -13,9 +13,9 @@ public class GCCRDTItem extends CRDTItem {
     // used to mark gc
     public boolean gc;
 
-    public GCCRDTItem(String content, CRDTID id, CRDTItem originLeft, CRDTItem originRight, boolean isDeleted,
+    public GCCRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
-        super(content, id, originLeft, originRight, isDeleted, left, right);
+        super(content, id, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
         this.gc = false;
     }
