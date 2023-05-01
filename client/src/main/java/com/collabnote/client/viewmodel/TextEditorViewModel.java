@@ -188,13 +188,11 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 break;
             // acknowledge sent
             case DONE:
-                System.out.println(this.documentEntity.getOperationBuffer().size());
                 // check
                 for (int i = 0; i < this.documentEntity.getOperationBuffer().size(); i++) {
                     if (this.documentEntity.getOperationBuffer().get(i).id
                             .equals(data.getCrdtItem().id)) {
                         this.documentEntity.getOperationBuffer().remove(i);
-                        System.out.println("ACK: " + data.getCrdtItem().content);
                     }
                 }
                 break;
