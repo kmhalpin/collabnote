@@ -102,7 +102,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
             }
         });
 
-        accountOfflineToggle = new JMenuItem("Offline Mode");
+        accountOfflineToggle = new JMenuItem("Online Mode");
         accountOfflineToggle.addActionListener(new ActionListener() {
 
             @Override

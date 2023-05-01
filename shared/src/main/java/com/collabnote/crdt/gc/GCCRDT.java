@@ -28,7 +28,7 @@ public class GCCRDT extends CRDT {
 
     @Override
     public CRDTItem bindItem(CRDTItemSerializable item) {
-        CRDTItem bitem = new GCCRDTItem(
+        GCCRDTItem bitem = new GCCRDTItem(
                 item.content,
                 item.id,
                 null,
@@ -120,18 +120,18 @@ public class GCCRDT extends CRDT {
                     lastGroup = (GCCRDTItem) o;
                 }
 
-                if (o.originLeft.equals(item.originLeft)) {
+                if (o.getOriginLeft().equals(item.getOriginLeft())) {
                     if (o.id.agent < item.id.agent) {
                         left = o;
                         conflictingItems.clear();
-                    } else if (o.originRight == item.originRight
-                            || (o.originRight != null && item.originRight != null
-                                    && o.originRight.id.agent == item.originRight.id.agent
-                                    && o.originRight.id.seq == item.originRight.id.seq)) {
+                    } else if (o.getOriginRight() == item.getOriginRight()
+                            || (o.getOriginRight() != null && item.getOriginRight() != null
+                                    && o.getOriginRight().id.agent == item.getOriginRight().id.agent
+                                    && o.getOriginRight().id.seq == item.getOriginRight().id.seq)) {
                         break;
                     }
-                } else if (o.originLeft != null && itemsBeforeOrigin.contains(o.originLeft)) {
-                    if (!conflictingItems.contains(o.originLeft)) {
+                } else if (o.getOriginLeft() != null && itemsBeforeOrigin.contains(o.getOriginLeft())) {
+                    if (!conflictingItems.contains(o.getOriginLeft())) {
                         left = o;
                         conflictingItems.clear();
                     }
@@ -242,11 +242,13 @@ public class GCCRDT extends CRDT {
         for (int i = 0; i < delimiters.size(); i += 2) {
             GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
-            if (gcItemLeftDelimiter.originRight != null && ((GCCRDTItem) gcItemLeftDelimiter.originRight).gc) {
-                gcItemLeftDelimiter.originRight = null;
+            if (gcItemLeftDelimiter.getOriginRight() != null
+                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).gc) {
+                gcItemLeftDelimiter.setOriginRight(null);
             }
-            if (gcItemRightDelimiter.originLeft != null && ((GCCRDTItem) gcItemRightDelimiter.originLeft).gc) {
-                gcItemRightDelimiter.originLeft = null;
+            if (gcItemRightDelimiter.getOriginLeft() != null
+                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).gc) {
+                gcItemRightDelimiter.setOriginLeft(null);
             }
         }
     }
@@ -268,8 +270,8 @@ public class GCCRDT extends CRDT {
                 if (recoverItem != null) {
                     // fix existing item, like delimiter
                     if (gcItem != null) {
-                        gcItem.originLeft = recoverItem.originLeft;
-                        gcItem.originRight = recoverItem.originRight;
+                        gcItem.setOriginLeft(recoverItem.getOriginLeft());
+                        gcItem.setOriginRight(recoverItem.getOriginRight());
                     } else {
                         // if garbage collected, recover normally
                         remoteInsert(recoverItem, false);
@@ -295,11 +297,14 @@ public class GCCRDT extends CRDT {
         List<CRDTItemSerializable> list = new ArrayList<>();
         GCCRDTItem i = (GCCRDTItem) start;
         while (i != null) {
-            System.out.print("{ " + (i.originLeft != null ? (i.originLeft.id.agent + "-" + i.originLeft.id.seq) : null)
+            System.out.print("{ "
+                    + (i.getOriginLeft() != null ? (i.getOriginLeft().id.agent + "-" + i.getOriginLeft().id.seq) : null)
                     + ", " + i.content + ", "
                     + (i.rightDeleteGroup != null && i.leftDeleteGroup != null ? "DG" : null) + ", "
                     + (i.isDeleted() ? "DELETED" : null) + ", " + i.level
-                    + ", " + (i.originRight != null ? (i.originRight.id.agent + "-" + i.originRight.id.seq) : null)
+                    + ", "
+                    + (i.getOriginRight() != null ? (i.getOriginRight().id.agent + "-" + i.getOriginRight().id.seq)
+                            : null)
                     + " }");
             list.add((CRDTItemSerializable) i.serialize());
             i = (GCCRDTItem) i.right;

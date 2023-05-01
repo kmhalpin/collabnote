@@ -48,12 +48,14 @@ public class CRDT {
             return null;
         }
 
+        CRDTItem originLeft = null, originRight = null;
         if (item.originLeft != null) {
-            bitem.left = bitem.originLeft = versionVector.find(item.originLeft);
+            bitem.left = originLeft = versionVector.find(item.originLeft);
         }
         if (item.originRight != null) {
-            bitem.right = bitem.originRight = versionVector.find(item.originRight);
+            bitem.right = originRight = versionVector.find(item.originRight);
         }
+        bitem.setOrigin(originLeft, originRight);
 
         return bitem;
     }
@@ -149,8 +151,9 @@ public class CRDT {
         try {
             this.lock.lock();
             Position p = findPosition(pos);
-            item.left = item.originLeft = p.left;
-            item.right = item.originRight = p.right;
+            item.left = p.left;
+            item.right = p.right;
+            item.setOrigin(p.left, p.right);
             integrate(item);
             versionVector.put(item);
             if (markerManager.marker != null) {
@@ -318,15 +321,15 @@ public class CRDT {
             while (o != null && o != item.right) {
                 itemsBeforeOrigin.add(o);
                 conflictingItems.add(o);
-                if (o.originLeft.equals(item.originLeft)) {
+                if (o.getOriginLeft().equals(item.getOriginLeft())) {
                     if (o.id.agent < item.id.agent) {
                         left = o;
                         conflictingItems.clear();
-                    } else if (o.originRight.equals(item.originRight)) {
+                    } else if (o.getOriginRight().equals(item.getOriginRight())) {
                         break;
                     }
-                } else if (o.originLeft != null && itemsBeforeOrigin.contains(o.originLeft)) {
-                    if (!conflictingItems.contains(o.originLeft)) {
+                } else if (o.getOriginLeft() != null && itemsBeforeOrigin.contains(o.getOriginLeft())) {
+                    if (!conflictingItems.contains(o.getOriginLeft())) {
                         left = o;
                         conflictingItems.clear();
                     }

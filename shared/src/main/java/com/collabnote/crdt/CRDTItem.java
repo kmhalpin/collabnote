@@ -3,8 +3,8 @@ package com.collabnote.crdt;
 public class CRDTItem {
     public String content;
     public CRDTID id;
-    public CRDTItem originLeft;
-    public CRDTItem originRight;
+    private CRDTItem originLeft;
+    private CRDTItem originRight;
     private boolean isDeleted;
     public CRDTItem left;
     public CRDTItem right;
@@ -34,4 +34,26 @@ public class CRDTItem {
     public void setDeleted() {
         this.isDeleted = true;
     }
+
+    public CRDTItem getOriginLeft() {
+        return originLeft;
+    }
+
+    public void setOriginLeft(CRDTItem originLeft) {
+        this.originLeft = originLeft;
+    }
+
+    public void setOrigin(CRDTItem originLeft, CRDTItem originRight) {
+        this.originLeft = originLeft;
+        this.originRight = originRight;
+    }
+
+    public CRDTItem getOriginRight() {
+        return originRight;
+    }
+
+    public void setOriginRight(CRDTItem originRight) {
+        this.originRight = originRight;
+    }
+
 }

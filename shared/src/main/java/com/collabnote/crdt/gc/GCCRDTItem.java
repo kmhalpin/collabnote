@@ -18,21 +18,20 @@ public class GCCRDTItem extends CRDTItem {
         super(content, id, originLeft, originRight, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
         this.gc = false;
-        if (this.originLeft == null || this.originRight == null) {
+    }
+
+    public void setLevel() {
+        if (this.getOriginLeft() == null || this.getOriginRight() == null) {
             this.level = 0;
         } else {
-            int originLeftLevel = ((GCCRDTItem) this.originLeft).level;
-            int originRightLevel = ((GCCRDTItem) this.originRight).level;
+            int originLeftLevel = ((GCCRDTItem) this.getOriginLeft()).level;
+            int originRightLevel = ((GCCRDTItem) this.getOriginRight()).level;
             if (originLeftLevel == originRightLevel) {
                 this.level = originLeftLevel + 1;
             } else {
                 this.level = Math.max(originLeftLevel, originRightLevel);
             }
         }
-    }
-
-    public GCCRDTItem(CRDTItem item) {
-        this(item.content, item.id, item.originLeft, item.originRight, item.isDeleted(), item.left, item.right);
     }
 
     public boolean isGarbageCollectable() {
@@ -144,9 +143,15 @@ public class GCCRDTItem extends CRDTItem {
 
     @Override
     public CRDTItemSerializable serialize() {
-        return new CRDTItemSerializable(this.content, this.id, this.originLeft != null ? this.originLeft.id : null,
-                this.originRight != null ? this.originRight.id : null,
+        return new CRDTItemSerializable(this.content, this.id, this.getOriginLeft() != null ? this.getOriginLeft().id : null,
+                this.getOriginRight() != null ? this.getOriginRight().id : null,
                 this.isDeleted());
+    }
+
+    @Override
+    public void setOrigin(CRDTItem originLeft, CRDTItem originRight) {
+        super.setOrigin(originLeft, originRight);
+        this.setLevel();
     }
 
 }

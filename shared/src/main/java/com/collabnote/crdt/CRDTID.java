@@ -11,11 +11,11 @@ public class CRDTID implements Serializable {
         this.seq = seq;
     }
 
-    boolean equals(CRDTID a) {
+    public boolean equals(CRDTID a) {
         return a == this || (a != null && this != null && a.agent == this.agent && a.seq == this.seq);
     }
 
-    boolean equals(int agent, int seq) {
+    public boolean equals(int agent, int seq) {
         return this != null && agent == this.agent && seq == this.seq;
     }
 }
