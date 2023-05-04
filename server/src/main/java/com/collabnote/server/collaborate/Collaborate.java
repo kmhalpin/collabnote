@@ -3,6 +3,7 @@ package com.collabnote.server.collaborate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.server.gc.GarbageCollectorManager;
@@ -39,8 +40,8 @@ public class Collaborate {
         this.docMaster.tryRemoteInsert(item);
     }
 
-    public List<CRDTItemSerializable> getCRDTItems() {
-        return this.docMaster.serialize();
+    public List<CRDTItem> getCRDTItems() {
+        return this.docMaster.getItems();
     }
 
     // @Override

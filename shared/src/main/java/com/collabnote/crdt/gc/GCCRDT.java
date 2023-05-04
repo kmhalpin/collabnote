@@ -118,7 +118,10 @@ public class GCCRDT extends CRDT {
                     lastGroup = (GCCRDTItem) o;
                 }
 
-                if (o.getOriginLeft().equals(item.getOriginLeft())) {
+                if (o.getOriginLeft() == item.getOriginLeft()
+                        || (o.getOriginLeft() != null && item.getOriginLeft() != null
+                                && o.getOriginLeft().id.agent == item.getOriginLeft().id.agent
+                                && o.getOriginLeft().id.seq == item.getOriginLeft().id.seq)) {
                     if (o.id.agent < item.id.agent) {
                         left = o;
                         conflictingItems.clear();
@@ -168,6 +171,7 @@ public class GCCRDT extends CRDT {
             // check splitable
             ((GCCRDTItem) item).checkSplitGC(lastGroup);
         }
+        ((GCCRDTItem) item).increaseOriginConflictReference();
     }
 
     @Override
@@ -225,14 +229,22 @@ public class GCCRDT extends CRDT {
         // remove vector history without lock, version vector used by network threads
         // operation
         // should be safe
-        for (int i = 0; i < gcItems.size(); i += 2) {
-            GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
-            GCCRDTItem rightdelimiter = gcItems.get(i + 1);
-            while (o != rightdelimiter) {
-                o.gc = true;
-                versionVector.remove(o);
+        ArrayList<GCCRDTItem> conflictedGCItems = new ArrayList<>(delimiters.size());
+        boolean recheck = false;
+        do {
+            for (int i = 0; i < gcItems.size(); i += 2) {
+                GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
+                GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+                while (o != rightdelimiter) {
+                    o.gc = true;
+                    recheck = o.decreaseOriginConflictReference();
+                    if (o.conflictReference <= 1)
+                        versionVector.remove(o);
+                    else
+                        conflictedGCItems.add(o);
+                }
             }
-        }
+        } while (recheck);
 
         // scan delimiter gc origin
         for (int i = 0; i < delimiters.size(); i += 2) {
@@ -245,6 +257,17 @@ public class GCCRDT extends CRDT {
             if (gcItemRightDelimiter.getOriginLeft() != null
                     && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).gc) {
                 gcItemRightDelimiter.setOriginLeft(null);
+            }
+        }
+
+        for (GCCRDTItem i : conflictedGCItems) {
+            if (i.getOriginRight() != null
+                    && ((GCCRDTItem) i.getOriginRight()).gc) {
+                i.setOriginRight(null);
+            }
+            if (i.getOriginLeft() != null
+                    && ((GCCRDTItem) i.getOriginLeft()).gc) {
+                i.setOriginLeft(null);
             }
         }
     }
@@ -285,14 +308,16 @@ public class GCCRDT extends CRDT {
         // concurrently split gc item to optimize soon
 
         // insert item
-        tryRemoteInsert(item);
+        if (item != null)
+            tryRemoteInsert(item);
     }
 
     @Override
-    public List<CRDTItemSerializable> serialize() {
-        List<CRDTItemSerializable> list = new ArrayList<>();
+    public List<CRDTItem> getItems() {
+        List<CRDTItem> list = new ArrayList<>();
         GCCRDTItem i = (GCCRDTItem) start;
         while (i != null) {
+            // TODO: remove print
             System.out.print("{ "
                     + (i.getOriginLeft() != null ? (i.getOriginLeft().id.agent + "-" + i.getOriginLeft().id.seq) : null)
                     + ", " + i.content + ", "
@@ -302,7 +327,7 @@ public class GCCRDT extends CRDT {
                     + (i.getOriginRight() != null ? (i.getOriginRight().id.agent + "-" + i.getOriginRight().id.seq)
                             : null)
                     + " }");
-            list.add((CRDTItemSerializable) i.serialize());
+            list.add(i);
             i = (GCCRDTItem) i.right;
         }
         System.out.println();

@@ -14,7 +14,7 @@ public class CRDT {
 
     // make sure crdt replica used by 1 thread only on each operation
     protected ReentrantLock lock;
-    // cache last local inserts
+    // cache last local inserts (unused now)
     protected MarkerManager markerManager;
 
     ArrayList<CRDTItemSerializable> insertQueue;
@@ -73,6 +73,10 @@ public class CRDT {
 
     public CRDTItem getStart() {
         return start;
+    }
+
+    public VersionVectors getVersionVector() {
+        return versionVector;
     }
 
     protected int findIndex(CRDTItem item) {
@@ -317,11 +321,17 @@ public class CRDT {
             while (o != null && o != item.right) {
                 itemsBeforeOrigin.add(o);
                 conflictingItems.add(o);
-                if (o.getOriginLeft().equals(item.getOriginLeft())) {
+                if (o.getOriginLeft() == item.getOriginLeft()
+                        || (o.getOriginLeft() != null && item.getOriginLeft() != null
+                                && o.getOriginLeft().id.agent == item.getOriginLeft().id.agent
+                                && o.getOriginLeft().id.seq == item.getOriginLeft().id.seq)) {
                     if (o.id.agent < item.id.agent) {
                         left = o;
                         conflictingItems.clear();
-                    } else if (o.getOriginRight().equals(item.getOriginRight())) {
+                    } else if (o.getOriginRight() == item.getOriginRight()
+                            || (o.getOriginRight() != null && item.getOriginRight() != null
+                                    && o.getOriginRight().id.agent == item.getOriginRight().id.agent
+                                    && o.getOriginRight().id.seq == item.getOriginRight().id.seq)) {
                         break;
                     }
                 } else if (o.getOriginLeft() != null && itemsBeforeOrigin.contains(o.getOriginLeft())) {
@@ -353,86 +363,39 @@ public class CRDT {
         }
     }
 
-    public List<CRDTItemSerializable> serialize() {
-        List<CRDTItemSerializable> list = new ArrayList<>();
+    public List<CRDTItem> getItems() {
+        List<CRDTItem> list = new ArrayList<>();
         CRDTItem i = start;
         while (i != null) {
-            list.add(i.serialize());
+            list.add(i);
             i = i.right;
         }
         return list;
     }
 
+    public void loadCRDT(CRDTItem start, VersionVectors versionVectors) {
+        this.insertQueue = new ArrayList<>(0);
+        this.deleteQueue = new ArrayList<>(0);
+        this.start = start;
+        this.versionVector = versionVectors;
+
+        Position p = findPosition(0);
+        while (p.right != null) {
+            this.remoteTransaction.onRemoteCRDTInsert(new Transaction() {
+                @Override
+                public Pair<Integer, CRDTItem> execute() {
+                    try {
+                        lock.lock();
+                        return new Pair<Integer, CRDTItem>(p.index, p.right);
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+            });
+            p.forward();
+        }
+    }
+
     // follow this alg:
     // https://github.com/josephg/reference-crdts/blob/9f4f9c3a97b497e2df8ae4473d1e521d3c3bf2d2/crdts.ts#L350
-    // private void integrate(CRDTItemSerializable item) {
-
-    // int left = item.originLeft == null ? -1 : findItemIndex(item.originLeft);
-    // int dst = left + 1;
-    // int right = item.originRight == null ? operations.size() :
-    // findItemIndex(item.originRight);
-
-    // boolean scanning = true;
-
-    // for (int i = dst;; i++) {
-    // if (!scanning)
-    // dst = i;
-    // if (i == operations.size())
-    // break;
-    // if (i == right)
-    // break;
-    // CRDTItemSerializable o = operations.get(i);
-    // int oleft = o.originLeft == null ? -1 : findItemIndex(o.originLeft);
-    // int oright = o.originRight == null ? operations.size() :
-    // findItemIndex(o.originRight);
-    // if (oleft < left)
-    // break;
-    // else if (oleft == left) {
-    // if (oright == right) { // conflicting
-    // if (item.id.agent.compareTo(o.id.agent) > 0) // compare site winner
-    // break;
-    // else {
-    // scanning = false;
-    // continue;
-    // }
-    // } else if (oright < right) {
-    // scanning = true;
-    // continue;
-    // } else {
-    // scanning = false;
-    // continue;
-    // }
-    // }
-    // }
-    // }
-
-    // enum Resolve {
-    // BREAK,
-    // CONTINUE,
-    // INCREASE_POS,
-    // }
-
-    // Resolve resolveConflict(int oleft, int o, int left, String oagent, String
-    // itemagent) {
-    // // Rule 2
-    // // Search for the last operation
-    // // that is to the left of i (left)
-    // if ((o < left
-    // || left <= oleft) // Rule 1: o1 < origin2 ∨ origin2 ≤ origin1
-    // && (oleft != left
-    // || oagent.compareTo(itemagent) > 0)) { // Rule 3: origin1 ≡ origin2 →
-    // creator1 < creator2
-    // // Rule 1 + 3
-    // // If this formula is fulfiled
-    // // item is successor of origin
-    // return Resolve.INCREASE_POS; // item index = origin index + 1
-    // } else {
-    // if (left > oleft) {
-    // // Rule 1 is no longer satisfied
-    // // since otherwise origin connections would cross
-    // return Resolve.BREAK;
-    // }
-    // }
-    // return Resolve.CONTINUE;
-    // }
 }

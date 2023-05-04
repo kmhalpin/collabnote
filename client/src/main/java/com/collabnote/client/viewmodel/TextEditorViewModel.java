@@ -53,7 +53,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         if (this.collaborationRepository.isConnected())
             this.collaborationRepository.closeConnection();
 
-        this.documentEntity = new DocumentEntity(new GCCRDT(0, document, this));
+        this.documentEntity = new DocumentEntity(new GCCRDT(this.agent, document, this));
         this.userCarets = new HashMap<>();
 
         try {
@@ -188,7 +188,6 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 break;
             // acknowledge sent
             case DONE:
-                // check
                 for (int i = 0; i < this.documentEntity.getOperationBuffer().size(); i++) {
                     if (this.documentEntity.getOperationBuffer().get(i).id
                             .equals(data.getCrdtItem().id)) {

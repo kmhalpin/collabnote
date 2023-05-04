@@ -10,6 +10,8 @@ public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
     public int level;
+    // used to check conflict on same level
+    public int conflictReference;
     // used to mark gc
     public boolean gc;
 
@@ -18,6 +20,32 @@ public class GCCRDTItem extends CRDTItem {
         super(content, id, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
         this.gc = false;
+        this.conflictReference = 0;
+    }
+
+    private int increaseConflictReference() {
+        return this.conflictReference++;
+    }
+
+    private int decreaseConflictReference() {
+        return this.conflictReference--;
+    }
+
+    public void increaseOriginConflictReference() {
+        if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
+            ((GCCRDTItem) this.getOriginLeft()).increaseConflictReference();
+        if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
+            ((GCCRDTItem) this.getOriginRight()).increaseConflictReference();
+    }
+
+    public boolean decreaseOriginConflictReference() {
+        boolean originNoRef = false;
+        if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
+            originNoRef = ((GCCRDTItem) this.getOriginLeft()).decreaseConflictReference() == 0;
+        if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
+            ((GCCRDTItem) this.getOriginRight()).decreaseConflictReference();
+
+        return originNoRef;
     }
 
     public void setLevel() {
@@ -42,27 +70,20 @@ public class GCCRDTItem extends CRDTItem {
         return super.isDeleted() && this.rightDeleteGroup != null && this.leftDeleteGroup != null;
     }
 
-    public void setDeleteGroupFrom(GCCRDTItem item) {
-        if (item.leftDeleteGroup != item) {
-            this.leftDeleteGroup = item.leftDeleteGroup;
-            this.leftDeleteGroup.rightDeleteGroup = this;
-        } else
-            this.leftDeleteGroup = this;
-
-        if (item.rightDeleteGroup != item) {
-            this.rightDeleteGroup = item.rightDeleteGroup;
-            this.rightDeleteGroup.leftDeleteGroup = this;
-        } else
-            this.rightDeleteGroup = this;
-
-        item.leftDeleteGroup = null;
-        item.rightDeleteGroup = null;
-
-    }
-
     @Override
     public void setDeleted() {
         super.setDeleted();
+        // if (super.getOriginLeft() != null
+        // && ((GCCRDTItem) super.getOriginLeft()).level == this.level
+        // && ((GCCRDTItem) super.getOriginLeft()).isGarbageCollectable()
+        // && ((GCCRDTItem) super.getOriginLeft()).conflictReference > 1) {
+        // }
+        // if (super.getOriginRight() != null
+        // && ((GCCRDTItem) super.getOriginRight()).level == this.level
+        // && ((GCCRDTItem) super.getOriginRight()).isGarbageCollectable()
+        // && ((GCCRDTItem) super.getOriginRight()).conflictReference > 1) {
+        // }
+
         if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
                 || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
             return;
@@ -143,7 +164,8 @@ public class GCCRDTItem extends CRDTItem {
 
     @Override
     public CRDTItemSerializable serialize() {
-        return new CRDTItemSerializable(this.content, this.id, this.getOriginLeft() != null ? this.getOriginLeft().id : null,
+        return new CRDTItemSerializable(this.content, this.id,
+                this.getOriginLeft() != null ? this.getOriginLeft().id : null,
                 this.getOriginRight() != null ? this.getOriginRight().id : null,
                 this.isDeleted());
     }

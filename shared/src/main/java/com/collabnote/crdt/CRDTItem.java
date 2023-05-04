@@ -1,6 +1,8 @@
 package com.collabnote.crdt;
 
-public class CRDTItem {
+import java.io.Serializable;
+
+public class CRDTItem implements Serializable {
     public String content;
     public CRDTID id;
     private CRDTItem originLeft;

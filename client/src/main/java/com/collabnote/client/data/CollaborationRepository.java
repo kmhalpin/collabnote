@@ -5,6 +5,7 @@ import java.io.IOException;
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.crdt.CRDT;
+import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.socket.DataPayload;
 import com.collabnote.socket.Type;
@@ -79,6 +80,8 @@ public class CollaborationRepository {
         });
     }
 
+    // public void reconnectCRDT(CRDT )
+
     public void shareCRDT(CRDT crdt, String host, int agent, ClientSocketListener mainListener) {
         if (crdt == null)
             return;
@@ -107,8 +110,8 @@ public class CollaborationRepository {
                     isReady = true;
 
                     // upload crdt
-                    for (CRDTItemSerializable crdtItem : crdt.serialize()) {
-                        socket.sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
+                    for (CRDTItem crdtItem : crdt.getItems()) {
+                        socket.sendData(DataPayload.insertPayload(data.getShareID(), crdtItem.serialize()));
                     }
                     socket.sendData(new DataPayload(Type.SHARE, data.getShareID(), null, 0, null));
                 }

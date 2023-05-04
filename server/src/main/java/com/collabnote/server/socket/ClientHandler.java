@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 
+import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.gc.GCCRDTItem;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.server.collaborate.CollaborateDatabase;
 import com.collabnote.socket.DataPayload;
@@ -109,9 +112,46 @@ public class ClientHandler extends Thread {
                                     this.state = ClientState.READY;
                                     this.collaborate.addClient(this);
 
-                                    for (CRDTItemSerializable crdtItem : this.collaborate.getCRDTItems()) {
-                                        sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
+                                    for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
+                                        sendData(DataPayload.insertPayload(data.getShareID(), crdtItem.serialize()));
                                     }
+                                    sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                                } else {
+                                    this.clientSocket.close();
+                                }
+                            }
+                            break;
+
+                        case RECONNECT:
+                            if (this.state == ClientState.UNKNOWN) {
+                                this.state = ClientState.CONNECTING;
+                                this.agent = data.getAgent();
+
+                                this.collaborate = this.collaborateDatabase.get(data.getShareID());
+                                if (this.collaborate != null && this.collaborate.isReady()) {
+                                    this.state = ClientState.READY;
+                                    this.collaborate.addClient(this);
+
+                                    ArrayList<CRDTItemSerializable> recoveryItems = new ArrayList<>();
+                                    ArrayList<CRDTItemSerializable> addedItems = new ArrayList<>();
+
+                                    for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
+                                        // TODO: send recovery payload for gc'ed items (check)
+                                        if (((GCCRDTItem) crdtItem).gc) {
+                                            recoveryItems.add(crdtItem.serialize());
+                                        } else {
+                                            addedItems.add(crdtItem.serialize());
+                                        }
+                                    }
+
+                                    // recover gc'ed operationss
+                                    sendData(DataPayload.recoverPayload(data.getShareID(), null, recoveryItems));
+                                    
+                                    // add item
+                                    for (CRDTItemSerializable i : addedItems) {
+                                        sendData(DataPayload.insertPayload(data.getShareID(), i));
+                                    }
+
                                     sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
                                 } else {
                                     this.clientSocket.close();

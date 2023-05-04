@@ -1,11 +1,12 @@
 package com.collabnote.crdt;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 // optimized vector clocks
-public class VersionVectors {
+public class VersionVectors implements Serializable {
     HashMap<Integer, ArrayList<CRDTItem>> versionVector;
 
     public VersionVectors() {
