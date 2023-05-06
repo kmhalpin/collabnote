@@ -107,7 +107,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                viewModel.toggleConnection();
+                viewModel.toggleConnection(crdtDocument);
             }
 
         });

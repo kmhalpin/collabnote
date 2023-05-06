@@ -1,6 +1,7 @@
 package com.collabnote.client.data;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
@@ -47,7 +48,9 @@ public class CollaborationRepository {
         this.socket.sendData(DataPayload.deletePayload(shareID, crdtItem));
     }
 
-    public void connectCRDT(String host, String shareID, int agent, ClientSocketListener mainListener) {
+    // reconnect if replica state has been populated
+    public void connectCRDT(ArrayList<CRDTItemSerializable> operationBuffer, String host, String shareID, int agent,
+            ClientSocketListener mainListener) {
         if (isConnected())
             closeConnection();
 
@@ -65,6 +68,25 @@ public class CollaborationRepository {
                 if (isReady || data.getType() == Type.INSERT || data.getType() == Type.DELETE)
                     mainListener.onReceiveData(data);
 
+                if (data.getType() == Type.SHARE) {
+                    // if no operation to sent, send ready connect
+                    if (operationBuffer.size() == 0) {
+                        socket.sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                    }
+                    // upload crdt
+                    for (CRDTItemSerializable crdtItem : operationBuffer) {
+                        socket.sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
+                    }
+                }
+
+                if (data.getType() == Type.DONE) {
+                    mainListener.onReceiveData(data);
+                    // if all operation sent, send ready connect
+                    if (operationBuffer.size() == 0) {
+                        socket.sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                    }
+                }
+
                 if (data.getType() == Type.CONNECT) {
                     isReady = true;
                     mainListener.onReceiveData(data);
@@ -79,8 +101,6 @@ public class CollaborationRepository {
 
         });
     }
-
-    // public void reconnectCRDT(CRDT )
 
     public void shareCRDT(CRDT crdt, String host, int agent, ClientSocketListener mainListener) {
         if (crdt == null)

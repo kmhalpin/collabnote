@@ -165,11 +165,9 @@ public class GCCRDT extends CRDT {
     @Override
     protected void integrate(CRDTItem item) {
         GCCRDTItem lastGroup = this.GCIntegrate(item);
+        ((GCCRDTItem) item).checkSplitGC(lastGroup);
         if (item.isDeleted()) {
             item.setDeleted();
-        } else {
-            // check splitable
-            ((GCCRDTItem) item).checkSplitGC(lastGroup);
         }
         ((GCCRDTItem) item).increaseOriginConflictReference();
     }
@@ -251,21 +249,26 @@ public class GCCRDT extends CRDT {
             GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
             if (gcItemLeftDelimiter.getOriginRight() != null
+                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).isGarbageCollectable()
                     && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).gc) {
                 gcItemLeftDelimiter.setOriginRight(null);
             }
             if (gcItemRightDelimiter.getOriginLeft() != null
+                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).gc) {
                 gcItemRightDelimiter.setOriginLeft(null);
             }
         }
 
+        // scan conflicted gc item origin
         for (GCCRDTItem i : conflictedGCItems) {
             if (i.getOriginRight() != null
+                    && ((GCCRDTItem) i.getOriginRight()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginRight()).gc) {
                 i.setOriginRight(null);
             }
             if (i.getOriginLeft() != null
+                    && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginLeft()).gc) {
                 i.setOriginLeft(null);
             }
@@ -281,7 +284,9 @@ public class GCCRDT extends CRDT {
             for (CRDTItemSerializable i : recoverItems) {
                 CRDTItem gcItem = null;
                 try {
-                    gcItem = versionVector.find(i.id);
+                    if (versionVector.exists(i.id))
+                        gcItem = versionVector.find(i.id);
+                    // TODO: else remote insert
                 } catch (NoSuchElementException e) {
                 }
 

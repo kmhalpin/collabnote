@@ -12,8 +12,7 @@ public enum Type {
 
     // these type used in garbage collect system
     RECOVER(7), // Recover operation from server
-    GC(8), // Garbage collect operation
-    RECONNECT(9); // used when reconnecting offline document to online
+    GC(8); // Garbage collect operation
 
     // ACKINSERT(9), // Sent by server: Acknowledge inserted text
     // ACKDELETE(10); // Sent by server: Acknowledge deleted text
