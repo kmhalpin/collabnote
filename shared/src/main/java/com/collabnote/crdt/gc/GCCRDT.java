@@ -228,18 +228,26 @@ public class GCCRDT extends CRDT {
         // operation
         // should be safe
         ArrayList<GCCRDTItem> conflictedGCItems = new ArrayList<>(delimiters.size());
-        boolean recheck = false;
+        boolean recheck;
         do {
+            recheck = false;
             for (int i = 0; i < gcItems.size(); i += 2) {
                 GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
                 GCCRDTItem rightdelimiter = gcItems.get(i + 1);
                 while (o != rightdelimiter) {
                     o.gc = true;
-                    recheck = o.decreaseOriginConflictReference();
-                    if (o.conflictReference <= 1)
+                    if (o.decreaseOriginConflictReference())
+                        recheck = true;
+                    if (o.conflictReference <= 1) {
                         versionVector.remove(o);
-                    else
+                        if (((GCCRDTItem) o.left).isGarbageCollectable()
+                                && ((GCCRDTItem) o.right).isGarbageCollectable()) {
+                            o.left.right = o.right;
+                            o.right.left = o.left;
+                        }
+                    } else
                         conflictedGCItems.add(o);
+                    o = (GCCRDTItem) o.right;
                 }
             }
         } while (recheck);
@@ -278,7 +286,6 @@ public class GCCRDT extends CRDT {
     // client recover can be run concurrently
     // runs by network thread
     public void recover(List<CRDTItemSerializable> gcItems, CRDTItemSerializable item) {
-        System.out.println("RECOVER");
         ArrayList<CRDTItem> recoveredItems = new ArrayList<>(gcItems.size());
         ArrayList<CRDTItemSerializable> newItems = new ArrayList<>();
         if (item != null)
@@ -287,20 +294,19 @@ public class GCCRDT extends CRDT {
         // recover state
         GCCRDTItem left = null;
         for (CRDTItemSerializable i : gcItems) {
-            System.out.print(", " + i.content);
             GCCRDTItem gcItem = null;
             try {
                 if (versionVector.exists(i.id))
                     gcItem = (GCCRDTItem) versionVector.find(i.id);
                 else {
                     newItems.add(i);
+                    gcItems.remove(i);
                     continue;
                 }
             } catch (NoSuchElementException e) {
             }
 
             if (gcItem != null) {
-                System.out.print(" [exists]");
                 gcItem.gc = false;
             }
 
@@ -316,9 +322,9 @@ public class GCCRDT extends CRDT {
                 // gc item
                 if (gcItem == null) {
                     gcItem = new GCCRDTItem(
-                            item.content,
-                            item.id,
-                            item.isDeleted,
+                            i.content,
+                            i.id,
+                            i.isDeleted,
                             left,
                             null);
                     versionVector.recover(gcItem);
@@ -331,7 +337,6 @@ public class GCCRDT extends CRDT {
 
             recoveredItems.add(gcItem);
         }
-        System.out.println();
 
         // recover state origin
         for (int i = 0; i < gcItems.size(); i++) {
