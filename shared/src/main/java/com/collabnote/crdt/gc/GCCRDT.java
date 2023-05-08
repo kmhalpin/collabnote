@@ -278,6 +278,7 @@ public class GCCRDT extends CRDT {
     // client recover can be run concurrently
     // runs by network thread
     public void recover(List<CRDTItemSerializable> gcItems, CRDTItemSerializable item) {
+        System.out.println("RECOVER");
         ArrayList<CRDTItem> recoveredItems = new ArrayList<>(gcItems.size());
         ArrayList<CRDTItemSerializable> newItems = new ArrayList<>();
         if (item != null)
@@ -286,13 +287,21 @@ public class GCCRDT extends CRDT {
         // recover state
         GCCRDTItem left = null;
         for (CRDTItemSerializable i : gcItems) {
+            System.out.print(", " + i.content);
             GCCRDTItem gcItem = null;
             try {
                 if (versionVector.exists(i.id))
                     gcItem = (GCCRDTItem) versionVector.find(i.id);
-                else
+                else {
                     newItems.add(i);
+                    continue;
+                }
             } catch (NoSuchElementException e) {
+            }
+
+            if (gcItem != null) {
+                System.out.print(" [exists]");
+                gcItem.gc = false;
             }
 
             if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.leftDeleteGroup == gcItem) {
@@ -322,6 +331,7 @@ public class GCCRDT extends CRDT {
 
             recoveredItems.add(gcItem);
         }
+        System.out.println();
 
         // recover state origin
         for (int i = 0; i < gcItems.size(); i++) {
@@ -333,6 +343,7 @@ public class GCCRDT extends CRDT {
 
             // fix existing item, like delimiter
             recoveredItem.setOrigin(bItem.getOriginLeft(), bItem.getOriginRight());
+            recoveredItem.setDeleted();
         }
 
         // concurrently split gc item to optimize soon

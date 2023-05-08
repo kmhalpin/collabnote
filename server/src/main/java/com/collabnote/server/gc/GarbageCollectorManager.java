@@ -57,7 +57,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                     // set selected delete group operations to gc
                     for (int i = 0; i < gcDelimiters.size(); i += 2) {
                         GCCRDTItem o = (GCCRDTItem) gcDelimiters.get(i).right;
-                        GCCRDTItem rightdelimiter = o.rightDeleteGroup;
+                        GCCRDTItem rightdelimiter = gcDelimiters.get(i + 1);
                         while (o != rightdelimiter) {
                             o.gc = true;
                             o = (GCCRDTItem) o.right;
@@ -94,20 +94,41 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         this.crdt = crdt;
     }
 
-    private ArrayList<CRDTItemSerializable> findConflictingGC(CRDTItem item) {
+    private ArrayList<CRDTItemSerializable> findConflictingGC(CRDTItem originLeft, CRDTItem originRight) {
         List<GCCRDTItem> conflictGC = new ArrayList<>();
         ArrayList<CRDTItemSerializable> conflictGCSerialize = new ArrayList<>();
 
         GCCRDTItem o;
 
         // start from left origin
-        if (item.getOriginLeft() != null) {
-            o = (GCCRDTItem) item.getOriginLeft();
+        if (originLeft != null) {
+            o = (GCCRDTItem) originLeft;
         } else {
             o = (GCCRDTItem) this.crdt.getStart();
         }
 
-        while (o != null && ((item.getOriginRight() != null && o != item.getOriginRight().right) || o != null)) {
+        if (o == null) {
+            return null;
+        }
+
+        // if origin left is right delimiter, move to right
+        if (o.isDeleteGroupDelimiter() && o.rightDeleteGroup == o) {
+            o = (GCCRDTItem) o.right;
+        }
+
+        // if origin right is left delimiter, move left
+        GCCRDTItem originRightGC = (GCCRDTItem) originRight;
+        if (originRightGC != null && originRightGC.isDeleteGroupDelimiter()
+                && originRightGC.leftDeleteGroup == originRightGC) {
+            originRightGC = (GCCRDTItem) originRightGC.left;
+        }
+
+        // move scan limit
+        if (originRightGC != null) {
+            originRightGC = (GCCRDTItem) originRightGC.right;
+        }
+
+        while (o != null && o != originRightGC) {
             // collect conflicting or origin gc
             if (o.gc) {
                 conflictGC.add(o);
@@ -116,23 +137,27 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         }
 
         if (conflictGC.size() > 0) {
-            CRDTItem l = conflictGC.get(0);
-            while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
-                conflictGC.add(0, (GCCRDTItem) l.left);
-                if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
-                    break;
+            GCCRDTItem l = conflictGC.get(0);
+            // only scan if its not left delimiter
+            if (!l.isDeleteGroupDelimiter() || l.leftDeleteGroup != l)
+                while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
+                    conflictGC.add(0, (GCCRDTItem) l.left);
+                    if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
+                        break;
+                    }
+                    l = (GCCRDTItem) l.left;
                 }
-                l = l.left;
-            }
 
-            CRDTItem r = conflictGC.get(conflictGC.size() - 1);
-            while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
-                conflictGC.add((GCCRDTItem) r.right);
-                if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
-                    break;
+            GCCRDTItem r = conflictGC.get(conflictGC.size() - 1);
+            // only scan if its not right delimiter
+            if (!r.isDeleteGroupDelimiter() || r.rightDeleteGroup != r)
+                while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
+                    conflictGC.add((GCCRDTItem) r.right);
+                    if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
+                        break;
+                    }
+                    r = (GCCRDTItem) r.right;
                 }
-                r = r.right;
-            }
         }
 
         for (GCCRDTItem i : conflictGC) {
@@ -144,12 +169,14 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
     @Override
     public void onRemoteCRDTInsert(Transaction transaction) {
+        List<CRDTItemSerializable> items = this.findConflictingGC(transaction.transactItem.getOriginLeft(),
+                transaction.transactItem.getOriginRight());
+
         lock.lock();
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
 
-        ArrayList<CRDTItemSerializable> items = this.findConflictingGC(result.getSecond());
-        if (items.size() > 0) {
+        if (items != null && items.size() > 0) {
             this.collaborate.broadcast(
                     DataPayload.recoverPayload(this.collaborate.shareID, result.getSecond().serialize(), items));
         } else {

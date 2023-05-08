@@ -257,7 +257,7 @@ public class CRDT {
 
     protected void delete(CRDTItem item) {
         if (!item.isDeleted()) {
-            this.remoteTransaction.onRemoteCRDTDelete(new Transaction() {
+            this.remoteTransaction.onRemoteCRDTDelete(new Transaction(item) {
 
                 @Override
                 public Pair<Integer, CRDTItem> execute() {
@@ -279,7 +279,7 @@ public class CRDT {
     }
 
     public void remoteInsert(CRDTItem item, boolean newItem) {
-        this.remoteTransaction.onRemoteCRDTInsert(new Transaction() {
+        this.remoteTransaction.onRemoteCRDTInsert(new Transaction(item) {
 
             @Override
             public Pair<Integer, CRDTItem> execute() {
@@ -381,7 +381,7 @@ public class CRDT {
 
         Position p = findPosition(0);
         while (p.right != null) {
-            this.remoteTransaction.onRemoteCRDTInsert(new Transaction() {
+            this.remoteTransaction.onRemoteCRDTInsert(new Transaction(p.right) {
                 @Override
                 public Pair<Integer, CRDTItem> execute() {
                     try {
