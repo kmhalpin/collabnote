@@ -71,7 +71,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
             @Override
             public void actionPerformed(ActionEvent e) {
                 String host = JOptionPane.showInputDialog("Enter collaboration server host");
-                if (!host.isEmpty())
+                if (host != null && !host.isEmpty())
                     viewModel.shareDocument(host);
             }
         });
@@ -82,7 +82,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
             public void actionPerformed(ActionEvent e) {
                 String host = JOptionPane.showInputDialog("Enter collaboration server host");
                 String shareID = JOptionPane.showInputDialog("Enter collaboration ID");
-                if (!host.isEmpty() && !shareID.isEmpty())
+                if (host != null && !host.isEmpty() && shareID != null && !shareID.isEmpty())
                     viewModel.connectDocument(crdtDocument, host, shareID);
             }
         });

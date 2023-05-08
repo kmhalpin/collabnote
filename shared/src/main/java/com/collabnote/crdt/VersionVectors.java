@@ -15,7 +15,9 @@ public class VersionVectors implements Serializable {
 
     public void remove(CRDTItem item) {
         ArrayList<CRDTItem> version = this.versionVector.get(item.id.agent);
-        version.remove(item);
+        // cannot remove last version
+        if (version.get(version.size() - 1) != item)
+            version.remove(item);
     }
 
     // optimize with binary search

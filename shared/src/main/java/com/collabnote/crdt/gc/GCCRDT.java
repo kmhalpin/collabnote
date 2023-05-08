@@ -277,44 +277,69 @@ public class GCCRDT extends CRDT {
 
     // client recover can be run concurrently
     // runs by network thread
-    public void recover(List<CRDTItemSerializable> recoverItems, CRDTItemSerializable item) {
-        // expected will 0
-        while (recoverItems.size() > 0) {
-            ArrayList<CRDTItemSerializable> missing = new ArrayList<>();
-            for (CRDTItemSerializable i : recoverItems) {
-                CRDTItem gcItem = null;
-                try {
-                    if (versionVector.exists(i.id))
-                        gcItem = versionVector.find(i.id);
-                    // TODO: else remote insert
-                } catch (NoSuchElementException e) {
-                }
+    public void recover(List<CRDTItemSerializable> gcItems, CRDTItemSerializable item) {
+        ArrayList<CRDTItem> recoveredItems = new ArrayList<>(gcItems.size());
+        ArrayList<CRDTItemSerializable> newItems = new ArrayList<>();
+        if (item != null)
+            newItems.add(item);
 
-                CRDTItem recoverItem = this.bindItem(i);
-                if (recoverItem != null) {
-                    // fix existing item, like delimiter
-                    if (gcItem != null) {
-                        gcItem.setOriginLeft(recoverItem.getOriginLeft());
-                        gcItem.setOriginRight(recoverItem.getOriginRight());
-                    } else {
-                        // if garbage collected, recover normally
-                        remoteInsert(recoverItem, false);
-                        versionVector.recover(recoverItem);
-                    }
-                } else {
-                    // if bitem not binded, or bitem's origins are isDeleteGroupGCed, queue to
-                    // missing until their origins correct
-                    missing.add(i);
-                }
+        // recover state
+        GCCRDTItem left = null;
+        for (CRDTItemSerializable i : gcItems) {
+            GCCRDTItem gcItem = null;
+            try {
+                if (versionVector.exists(i.id))
+                    gcItem = (GCCRDTItem) versionVector.find(i.id);
+                else
+                    newItems.add(i);
+            } catch (NoSuchElementException e) {
             }
-            recoverItems = missing;
+
+            if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.leftDeleteGroup == gcItem) {
+                // left delimiter
+                left = gcItem;
+            } else if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.rightDeleteGroup == gcItem) {
+                // right delimiter
+                left.right = gcItem;
+                gcItem.left = left;
+                left = null;
+            } else {
+                // gc item
+                if (gcItem == null) {
+                    gcItem = new GCCRDTItem(
+                            item.content,
+                            item.id,
+                            item.isDeleted,
+                            left,
+                            null);
+                    versionVector.recover(gcItem);
+                } else {
+                    gcItem.left = left;
+                }
+                left.right = gcItem;
+                left = gcItem;
+            }
+
+            recoveredItems.add(gcItem);
+        }
+
+        // recover state origin
+        for (int i = 0; i < gcItems.size(); i++) {
+            GCCRDTItem bItem = (GCCRDTItem) this.bindItem(gcItems.get(i));
+            CRDTItem recoveredItem = recoveredItems.get(i);
+
+            if (bItem == null || recoveredItem == null)
+                throw new NoSuchElementException("unexpected");
+
+            // fix existing item, like delimiter
+            recoveredItem.setOrigin(bItem.getOriginLeft(), bItem.getOriginRight());
         }
 
         // concurrently split gc item to optimize soon
 
         // insert item
-        if (item != null)
-            tryRemoteInsert(item);
+        for (CRDTItemSerializable i : newItems)
+            tryRemoteInsert(i);
     }
 
     @Override

@@ -90,7 +90,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
         DocumentEntity oldEntity = this.documentEntity;
 
-        if (this.documentEntity.isCollaborating()) {
+        if (oldEntity.isCollaborating()) {
             if (this.collaborationRepository.isConnected()) {
                 this.collaborationRepository.closeConnection();
             } else {

@@ -43,7 +43,7 @@ public class GCCRDTItem extends CRDTItem {
         if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
             originNoRef = ((GCCRDTItem) this.getOriginLeft()).decreaseConflictReference() == 0;
         if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
-            ((GCCRDTItem) this.getOriginRight()).decreaseConflictReference();
+            originNoRef = ((GCCRDTItem) this.getOriginRight()).decreaseConflictReference() == 0;
 
         return originNoRef;
     }
