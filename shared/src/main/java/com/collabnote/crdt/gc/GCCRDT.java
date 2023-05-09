@@ -227,24 +227,19 @@ public class GCCRDT extends CRDT {
         // operation
         // should be safe
         ArrayList<GCCRDTItem> conflictedGCItems = new ArrayList<>(delimiters.size());
-        boolean recheck;
-        do {
-            recheck = false;
-            for (int i = 0; i < gcItems.size(); i += 2) {
-                GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
-                GCCRDTItem rightdelimiter = gcItems.get(i + 1);
-                while (o != rightdelimiter) {
-                    o.gc = true;
-                    // fix
-                    if (!o.levelBase && o.conflictReferenceLeft <= 1 && o.conflictReferenceRight <= 1) {
-                        versionVector.remove(o);
-                        o.decreaseOriginConflictReference();
-                    } else
-                        conflictedGCItems.add(o);
-                    o = (GCCRDTItem) o.right;
-                }
+        for (int i = 0; i < gcItems.size(); i += 2) {
+            GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
+            GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+            while (o != rightdelimiter) {
+                o.gc = true;
+                // fix
+                if (!o.levelBase && o.conflictReferenceLeft <= 1 && o.conflictReferenceRight <= 1) {
+                    versionVector.remove(o);
+                } else
+                    conflictedGCItems.add(o);
+                o = (GCCRDTItem) o.right;
             }
-        } while (recheck);
+        }
 
         // scan delimiter gc origin
         for (int i = 0; i < delimiters.size(); i += 2) {

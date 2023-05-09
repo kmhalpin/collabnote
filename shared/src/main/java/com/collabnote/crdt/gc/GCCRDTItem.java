@@ -66,7 +66,13 @@ public class GCCRDTItem extends CRDTItem {
                 this.level = originLeftLevel + 1;
                 ((GCCRDTItem) this.getOriginLeft()).levelBase = ((GCCRDTItem) this.getOriginRight()).levelBase = true;
             } else {
-                this.level = Math.max(originLeftLevel, originRightLevel);
+                if (originLeftLevel > originRightLevel) {
+                    this.level = originLeftLevel;
+                    ((GCCRDTItem) this.getOriginRight()).levelBase = true;
+                } else {
+                    this.level = originRightLevel;
+                    ((GCCRDTItem) this.getOriginLeft()).levelBase = true;
+                }
             }
         }
     }
@@ -128,6 +134,44 @@ public class GCCRDTItem extends CRDTItem {
 
             this.rightDeleteGroup = this.leftDeleteGroup = null;
         }
+    }
+
+    // remove entire delete group in a level if possible
+    public void removeLevelDeleteGroup() {
+        if (!this.isDeleteGroupDelimiter()) {
+            return;
+        }
+
+        GCCRDTItem leftLevelBase = (GCCRDTItem) this.leftDeleteGroup.left;
+        GCCRDTItem rightLevelBase = (GCCRDTItem) this.rightDeleteGroup.right;
+
+        if (!(leftLevelBase != null
+                && leftLevelBase.isDeleteGroupDelimiter()
+                && leftLevelBase.level == this.level - 1)) {
+            return;
+        }
+        if (!(rightLevelBase != null
+                && rightLevelBase.isDeleteGroupDelimiter()
+                && rightLevelBase.level == this.level - 1)) {
+            return;
+        }
+
+        // connect level base
+        leftLevelBase.right = rightLevelBase;
+        rightLevelBase.left = leftLevelBase;
+
+        // merge level base delete group
+        leftLevelBase.leftDeleteGroup.rightDeleteGroup = rightLevelBase.rightDeleteGroup;
+        rightLevelBase.rightDeleteGroup.leftDeleteGroup = leftLevelBase.leftDeleteGroup;
+
+        leftLevelBase.leftDeleteGroup = leftLevelBase.rightDeleteGroup = rightLevelBase.leftDeleteGroup = rightLevelBase.rightDeleteGroup = null;
+
+        // transform delete group to garbage collectable
+        GCCRDTItem templeft = this.leftDeleteGroup;
+        GCCRDTItem tempright = this.rightDeleteGroup;
+        templeft.leftDeleteGroup = templeft.rightDeleteGroup = null;
+        tempright.leftDeleteGroup = tempright.rightDeleteGroup = null;
+        templeft = tempright = null;
     }
 
     public void checkSplitGC() {
