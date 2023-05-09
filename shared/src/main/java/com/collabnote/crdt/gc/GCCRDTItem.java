@@ -10,42 +10,50 @@ public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
     public int level;
-    // used to check conflict on same level
-    public int conflictReference;
+    // count reference on same level
+    public int conflictReferenceLeft;
+    public int conflictReferenceRight;
     // used to mark gc
     public boolean gc;
+    // mark item as base of other level
+    public boolean levelBase;
 
     public GCCRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
         super(content, id, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
-        this.gc = false;
-        this.conflictReference = 0;
+        this.gc = this.levelBase = false;
+        this.conflictReferenceLeft = this.conflictReferenceRight = 0;
     }
 
-    private int increaseConflictReference() {
-        return this.conflictReference++;
+    private int increaseConflictReferenceLeft() {
+        return this.conflictReferenceLeft++;
     }
 
-    private int decreaseConflictReference() {
-        return this.conflictReference--;
+    private int decreaseConflictReferenceLeft() {
+        return this.conflictReferenceLeft--;
+    }
+
+    private int increaseConflictReferenceRight() {
+        return this.conflictReferenceRight++;
+    }
+
+    private int decreaseConflictReferenceRight() {
+        return this.conflictReferenceRight--;
     }
 
     public void increaseOriginConflictReference() {
         if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
-            ((GCCRDTItem) this.getOriginLeft()).increaseConflictReference();
+            ((GCCRDTItem) this.getOriginLeft()).increaseConflictReferenceRight();
         if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
-            ((GCCRDTItem) this.getOriginRight()).increaseConflictReference();
+            ((GCCRDTItem) this.getOriginRight()).increaseConflictReferenceLeft();
     }
 
-    public boolean decreaseOriginConflictReference() {
-        boolean originNoRef = false;
+    public void decreaseOriginConflictReference() {
         if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
-            originNoRef = ((GCCRDTItem) this.getOriginLeft()).decreaseConflictReference() == 1;
+            ((GCCRDTItem) this.getOriginLeft()).decreaseConflictReferenceRight();
         if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
-            originNoRef = ((GCCRDTItem) this.getOriginRight()).decreaseConflictReference() == 1;
-
-        return originNoRef;
+            ((GCCRDTItem) this.getOriginRight()).decreaseConflictReferenceLeft();
     }
 
     public void setLevel() {
@@ -56,6 +64,7 @@ public class GCCRDTItem extends CRDTItem {
             int originRightLevel = ((GCCRDTItem) this.getOriginRight()).level;
             if (originLeftLevel == originRightLevel) {
                 this.level = originLeftLevel + 1;
+                ((GCCRDTItem) this.getOriginLeft()).levelBase = ((GCCRDTItem) this.getOriginRight()).levelBase = true;
             } else {
                 this.level = Math.max(originLeftLevel, originRightLevel);
             }
@@ -174,6 +183,7 @@ public class GCCRDTItem extends CRDTItem {
     public void setOrigin(CRDTItem originLeft, CRDTItem originRight) {
         super.setOrigin(originLeft, originRight);
         this.setLevel();
+        this.increaseOriginConflictReference();
     }
 
 }

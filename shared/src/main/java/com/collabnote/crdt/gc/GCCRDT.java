@@ -169,7 +169,6 @@ public class GCCRDT extends CRDT {
         if (item.isDeleted()) {
             item.setDeleted();
         }
-        ((GCCRDTItem) item).increaseOriginConflictReference();
     }
 
     @Override
@@ -236,15 +235,10 @@ public class GCCRDT extends CRDT {
                 GCCRDTItem rightdelimiter = gcItems.get(i + 1);
                 while (o != rightdelimiter) {
                     o.gc = true;
-                    if (o.decreaseOriginConflictReference())
-                        recheck = true;
-                    if (o.conflictReference <= 1) {
+                    // fix
+                    if (!o.levelBase && o.conflictReferenceLeft <= 1 && o.conflictReferenceRight <= 1) {
                         versionVector.remove(o);
-                        if (((GCCRDTItem) o.left).isGarbageCollectable()
-                                && ((GCCRDTItem) o.right).isGarbageCollectable()) {
-                            o.left.right = o.right;
-                            o.right.left = o.left;
-                        }
+                        o.decreaseOriginConflictReference();
                     } else
                         conflictedGCItems.add(o);
                     o = (GCCRDTItem) o.right;
@@ -259,12 +253,12 @@ public class GCCRDT extends CRDT {
             if (gcItemLeftDelimiter.getOriginRight() != null
                     && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).isGarbageCollectable()
                     && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).gc) {
-                gcItemLeftDelimiter.setOriginRight(null);
+                gcItemLeftDelimiter.removeOriginRight();
             }
             if (gcItemRightDelimiter.getOriginLeft() != null
                     && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).gc) {
-                gcItemRightDelimiter.setOriginLeft(null);
+                gcItemRightDelimiter.removeOriginLeft();
             }
         }
 
@@ -273,13 +267,14 @@ public class GCCRDT extends CRDT {
             if (i.getOriginRight() != null
                     && ((GCCRDTItem) i.getOriginRight()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginRight()).gc) {
-                i.setOriginRight(null);
+                i.removeOriginRight();
             }
             if (i.getOriginLeft() != null
                     && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginLeft()).gc) {
-                i.setOriginLeft(null);
+                i.removeOriginLeft();
             }
+            i.left = i.right = null;
         }
     }
 
