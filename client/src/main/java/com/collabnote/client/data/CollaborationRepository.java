@@ -65,13 +65,16 @@ public class CollaborationRepository {
 
             @Override
             public void onReceiveData(DataPayload data) {
-                if (isReady || data.getType() == Type.INSERT || data.getType() == Type.DELETE)
+                if (isReady || data.getType() == Type.INSERT || data.getType() == Type.DELETE) {
                     mainListener.onReceiveData(data);
+                    return;
+                }
 
                 if (data.getType() == Type.SHARE) {
                     // if no operation to sent, send ready connect
                     if (operationBuffer.size() == 0) {
                         socket.sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                        return;
                     }
                     // upload crdt
                     for (CRDTItemSerializable crdtItem : operationBuffer) {
@@ -121,8 +124,10 @@ public class CollaborationRepository {
 
             @Override
             public void onReceiveData(DataPayload data) {
-                if (isReady)
+                if (isReady) {
                     mainListener.onReceiveData(data);
+                    return;
+                }
 
                 if (data.getType() == Type.SHARE) {
                     mainListener.onReceiveData(data);
