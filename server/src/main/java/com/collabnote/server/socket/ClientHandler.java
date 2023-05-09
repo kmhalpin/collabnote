@@ -106,15 +106,14 @@ public class ClientHandler extends Thread {
 
                                 this.collaborate = this.collaborateDatabase.get(data.getShareID());
                                 if (this.collaborate != null && this.collaborate.isReady()) {
-                                    this.state = ClientState.SHARING;
+                                    this.state = ClientState.READY;
 
                                     // send to client to share their changes
                                     sendData(new DataPayload(Type.SHARE, data.getShareID(), null, 0, null));
                                 } else {
                                     this.clientSocket.close();
                                 }
-                            } else if (this.state == ClientState.SHARING) {
-                                this.state = ClientState.READY;
+                            } else if (this.state == ClientState.READY) {
                                 this.collaborate.addClient(this);
 
                                 // share server state
