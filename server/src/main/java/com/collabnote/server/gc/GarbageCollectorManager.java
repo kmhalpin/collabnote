@@ -47,7 +47,8 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                                 if (opsCounter > 0) {
                                     gcDelimiters.add(ops.leftDeleteGroup);
                                     gcDelimiters.add(ops);
-                                    ops.leftDeleteGroup.gc = ops.gc = true;
+                                    ops.leftDeleteGroup.setGc(true);
+                                    ops.setGc(true);
                                 }
                             }
                         }
@@ -59,7 +60,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                         GCCRDTItem o = (GCCRDTItem) gcDelimiters.get(i).right;
                         GCCRDTItem rightdelimiter = gcDelimiters.get(i + 1);
                         while (o != rightdelimiter) {
-                            o.gc = true;
+                            o.setGc(true);
                             o = (GCCRDTItem) o.right;
                         }
                     }
@@ -130,7 +131,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
         while (o != null && o != originRightGC) {
             // collect conflicting or origin gc
-            if (o.gc) {
+            if (o.getGc()) {
                 conflictGC.add(o);
             }
             o = (GCCRDTItem) o.right;
@@ -140,7 +141,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
             GCCRDTItem l = conflictGC.get(0);
             // only scan if its not left delimiter
             if (!l.isDeleteGroupDelimiter() || l.leftDeleteGroup != l)
-                while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).gc) {
+                while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).getGc()) {
                     conflictGC.add(0, (GCCRDTItem) l.left);
                     if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
                         break;
@@ -151,7 +152,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
             GCCRDTItem r = conflictGC.get(conflictGC.size() - 1);
             // only scan if its not right delimiter
             if (!r.isDeleteGroupDelimiter() || r.rightDeleteGroup != r)
-                while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).gc) {
+                while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).getGc()) {
                     conflictGC.add((GCCRDTItem) r.right);
                     if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
                         break;

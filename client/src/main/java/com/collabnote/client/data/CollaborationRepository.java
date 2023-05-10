@@ -34,6 +34,13 @@ public class CollaborationRepository {
         this.socket.sendData(DataPayload.caretPayload(shareID, index));
     }
 
+    public void sendGCAck(String shareID) {
+        if (!isConnected())
+            return;
+
+        this.socket.sendData(DataPayload.gcPayload(shareID, null));
+    }
+
     public void sendInsert(String shareID, CRDTItemSerializable crdtItem) {
         if (!isConnected())
             return;
