@@ -189,7 +189,7 @@ public class GCCRDT extends CRDT {
 
         for (CRDTItemSerializable i : item) {
             GCCRDTItem fitem = (GCCRDTItem) versionVector.find(i.id);
-            if (fitem == null)
+            if (fitem == null || fitem.getGc())
                 throw new NoSuchElementException("not expected");
 
             // make sure everything deleted
@@ -204,21 +204,17 @@ public class GCCRDT extends CRDT {
             GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
             GCCRDTItem gcItemStart = (GCCRDTItem) gcItemLeftDelimiter.right;
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
-            boolean isDelimiter;
+            boolean isGcOk = true;
 
-            // gc delete group if delimiter not changed
-            this.lock.lock();
-            isDelimiter = gcItemLeftDelimiter.isDeleteGroupDelimiter() && gcItemRightDelimiter.isDeleteGroupDelimiter()
-                    && gcItemLeftDelimiter.rightDeleteGroup == gcItemRightDelimiter
-                    && gcItemRightDelimiter.leftDeleteGroup == gcItemLeftDelimiter;
-            if (isDelimiter) {
+            GCCRDTItem o = gcItemStart;
+            // gc delete group if not splitted
+            while (o != gcItemRightDelimiter && (isGcOk = !o.isDeleteGroupDelimiter())) {
+                o = (GCCRDTItem) o.right;
+            }
+
+            if (isGcOk) {
                 gcItemLeftDelimiter.right = gcItemRightDelimiter;
                 gcItemRightDelimiter.left = gcItemLeftDelimiter;
-            }
-            this.lock.unlock();
-
-            // separate from lock
-            if (isDelimiter) {
                 gcItems.add(gcItemStart);
                 gcItems.add(gcItemRightDelimiter);
             } else {
@@ -237,7 +233,7 @@ public class GCCRDT extends CRDT {
                 o.setGc(true);
                 // cannot remove level base, and conflicting reference item, only removing when
                 // item is stable in every replica
-                if (!o.getLevelBase() && o.getLeftRefrencer() <= 1 && o.getRightRefrencer() <= 1) {
+                if (!o.getLevelBase() && o.getLeftRefrencer() < 2 && o.getRightRefrencer() < 2) {
                     versionVector.remove(o);
                 } else
                     conflictedGCItems.add(o);
@@ -302,34 +298,32 @@ public class GCCRDT extends CRDT {
             } catch (NoSuchElementException e) {
             }
 
-            if (gcItem != null) {
-                gcItem.setGc(false);
+            // expected first left
+            if (left == null) {
+                if (gcItem == null) {
+                    throw new RuntimeException("unexpected");
+                }
+                left = gcItem;
             }
 
-            if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.leftDeleteGroup == gcItem) {
-                // left delimiter
-                left = gcItem;
-            } else if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.rightDeleteGroup == gcItem) {
-                // right delimiter
-                left.right = gcItem;
-                gcItem.left = left;
-                left = null;
+            if (gcItem == null) {
+                gcItem = new GCCRDTItem(
+                        i.content,
+                        i.id,
+                        i.isDeleted,
+                        left,
+                        null);
+                versionVector.recover(gcItem);
             } else {
-                // gc item
-                if (gcItem == null) {
-                    gcItem = new GCCRDTItem(
-                            i.content,
-                            i.id,
-                            i.isDeleted,
-                            left,
-                            null);
-                    versionVector.recover(gcItem);
-                } else {
+                gcItem.setGc(false);
+
+                if (gcItem.left == null)
                     gcItem.left = left;
-                }
-                left.right = gcItem;
-                left = gcItem;
             }
+
+            if (left.isDeleted())
+                left.right = gcItem;
+            left = gcItem;
 
             recoveredItems.add(gcItem);
         }

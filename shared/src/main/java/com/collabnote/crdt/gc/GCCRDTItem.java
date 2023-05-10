@@ -44,7 +44,7 @@ public class GCCRDTItem extends CRDTItem {
 
     public void increaseLeftRefrencer() {
         if (this.getLeftRefrencer() < 2)
-            this.flags ^= ((this.flags & 12) * 2) + 4;
+            this.flags ^= ((this.flags & 4) * 2) + 4;
     }
 
     public int getRightRefrencer() {
@@ -53,7 +53,7 @@ public class GCCRDTItem extends CRDTItem {
 
     public void increaseRightRefrencer() {
         if (this.getRightRefrencer() < 2)
-            this.flags ^= ((this.flags & 48) * 2) + 16;
+            this.flags ^= ((this.flags & 16) * 2) + 16;
     }
 
     public GCCRDTItem(String content, CRDTID id, boolean isDeleted,
@@ -103,16 +103,6 @@ public class GCCRDTItem extends CRDTItem {
     @Override
     public void setDeleted() {
         super.setDeleted();
-        // if (super.getOriginLeft() != null
-        // && ((GCCRDTItem) super.getOriginLeft()).level == this.level
-        // && ((GCCRDTItem) super.getOriginLeft()).isGarbageCollectable()
-        // && ((GCCRDTItem) super.getOriginLeft()).conflictReference > 1) {
-        // }
-        // if (super.getOriginRight() != null
-        // && ((GCCRDTItem) super.getOriginRight()).level == this.level
-        // && ((GCCRDTItem) super.getOriginRight()).isGarbageCollectable()
-        // && ((GCCRDTItem) super.getOriginRight()).conflictReference > 1) {
-        // }
 
         if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
                 || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
@@ -151,8 +141,8 @@ public class GCCRDTItem extends CRDTItem {
         }
     }
 
-    // remove entire delete group in a level if possible
-    public void removeLevelDeleteGroup() {
+    // remove entire delete group in a level and merge top level delete group
+    public void mergeLevelDeleteGroup() {
         if (!this.isDeleteGroupDelimiter()) {
             return;
         }
