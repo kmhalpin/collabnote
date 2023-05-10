@@ -183,8 +183,9 @@ public class GCCRDT extends CRDT {
 
     // client gc items expected marked and sorted by deleted group first
     // runs by network thread
-    public void GC(List<CRDTItemSerializable> item) {
+    public boolean GC(List<CRDTItemSerializable> item) {
         ArrayList<GCCRDTItem> delimiters = new ArrayList<>();
+        boolean gcSuccess = true;
 
         for (CRDTItemSerializable i : item) {
             GCCRDTItem fitem = (GCCRDTItem) versionVector.find(i.id);
@@ -220,6 +221,8 @@ public class GCCRDT extends CRDT {
             if (isDelimiter) {
                 gcItems.add(gcItemStart);
                 gcItems.add(gcItemRightDelimiter);
+            } else {
+                gcSuccess = false;
             }
         }
 
@@ -231,9 +234,10 @@ public class GCCRDT extends CRDT {
             GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
             GCCRDTItem rightdelimiter = gcItems.get(i + 1);
             while (o != rightdelimiter) {
-                o.gc = true;
-                // fix
-                if (!o.levelBase && o.conflictReferenceLeft <= 1 && o.conflictReferenceRight <= 1) {
+                o.setGc(true);
+                // cannot remove level base, and conflicting reference item, only removing when
+                // item is stable in every replica
+                if (!o.getLevelBase() && o.getLeftRefrencer() <= 1 && o.getRightRefrencer() <= 1) {
                     versionVector.remove(o);
                 } else
                     conflictedGCItems.add(o);
@@ -247,12 +251,12 @@ public class GCCRDT extends CRDT {
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
             if (gcItemLeftDelimiter.getOriginRight() != null
                     && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).isGarbageCollectable()
-                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).gc) {
+                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).getGc()) {
                 gcItemLeftDelimiter.removeOriginRight();
             }
             if (gcItemRightDelimiter.getOriginLeft() != null
                     && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).isGarbageCollectable()
-                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).gc) {
+                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).getGc()) {
                 gcItemRightDelimiter.removeOriginLeft();
             }
         }
@@ -261,16 +265,18 @@ public class GCCRDT extends CRDT {
         for (GCCRDTItem i : conflictedGCItems) {
             if (i.getOriginRight() != null
                     && ((GCCRDTItem) i.getOriginRight()).isGarbageCollectable()
-                    && ((GCCRDTItem) i.getOriginRight()).gc) {
+                    && ((GCCRDTItem) i.getOriginRight()).getGc()) {
                 i.removeOriginRight();
             }
             if (i.getOriginLeft() != null
                     && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
-                    && ((GCCRDTItem) i.getOriginLeft()).gc) {
+                    && ((GCCRDTItem) i.getOriginLeft()).getGc()) {
                 i.removeOriginLeft();
             }
             i.left = i.right = null;
         }
+
+        return gcSuccess;
     }
 
     // client recover can be run concurrently
@@ -297,7 +303,7 @@ public class GCCRDT extends CRDT {
             }
 
             if (gcItem != null) {
-                gcItem.gc = false;
+                gcItem.setGc(false);
             }
 
             if (gcItem != null && gcItem.isDeleteGroupDelimiter() && gcItem.leftDeleteGroup == gcItem) {

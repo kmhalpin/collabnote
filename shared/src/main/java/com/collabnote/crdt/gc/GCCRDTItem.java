@@ -10,50 +10,64 @@ public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
     public int level;
-    // count reference on same level
-    public int conflictReferenceLeft;
-    public int conflictReferenceRight;
+
+    // 1 = gc
+    // 2 = levelBase
+    // 4-8 = conflictReferenceLeft (mask = 12)
+    // 16-32 = conflictReferenceRight (mask = 48)
+    public byte flags;
+
     // used to mark gc
-    public boolean gc;
+    public boolean getGc() {
+        return (this.flags & 1) > 0;
+    }
+
+    public void setGc(boolean gc) {
+        if (this.getGc() != gc)
+            this.flags ^= 1;
+    }
+
     // mark item as base of other level
-    public boolean levelBase;
+    public boolean getLevelBase() {
+        return (this.flags & 2) > 0;
+    }
+
+    public void setLevelBase(boolean levelBase) {
+        if (this.getLevelBase() != levelBase)
+            this.flags ^= 2;
+    }
+
+    // count reference on same level (1 (single reference), 2 (conflict reference))
+    public int getLeftRefrencer() {
+        return (this.flags & 12) / 4;
+    }
+
+    public void increaseLeftRefrencer() {
+        if (this.getLeftRefrencer() < 2)
+            this.flags ^= ((this.flags & 12) * 2) + 4;
+    }
+
+    public int getRightRefrencer() {
+        return (this.flags & 48) / 16;
+    }
+
+    public void increaseRightRefrencer() {
+        if (this.getRightRefrencer() < 2)
+            this.flags ^= ((this.flags & 48) * 2) + 16;
+    }
 
     public GCCRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
         super(content, id, isDeleted, left, right);
         this.rightDeleteGroup = this.leftDeleteGroup = null;
-        this.gc = this.levelBase = false;
-        this.conflictReferenceLeft = this.conflictReferenceRight = 0;
-    }
-
-    private int increaseConflictReferenceLeft() {
-        return this.conflictReferenceLeft++;
-    }
-
-    private int decreaseConflictReferenceLeft() {
-        return this.conflictReferenceLeft--;
-    }
-
-    private int increaseConflictReferenceRight() {
-        return this.conflictReferenceRight++;
-    }
-
-    private int decreaseConflictReferenceRight() {
-        return this.conflictReferenceRight--;
+        this.flags = 0;
     }
 
     public void increaseOriginConflictReference() {
         if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
-            ((GCCRDTItem) this.getOriginLeft()).increaseConflictReferenceRight();
+            ((GCCRDTItem) this.getOriginLeft()).increaseRightRefrencer();
         if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
-            ((GCCRDTItem) this.getOriginRight()).increaseConflictReferenceLeft();
-    }
-
-    public void decreaseOriginConflictReference() {
-        if (this.getOriginLeft() != null && ((GCCRDTItem) this.getOriginLeft()).level == this.level)
-            ((GCCRDTItem) this.getOriginLeft()).decreaseConflictReferenceRight();
-        if (this.getOriginRight() != null && ((GCCRDTItem) this.getOriginRight()).level == this.level)
-            ((GCCRDTItem) this.getOriginRight()).decreaseConflictReferenceLeft();
+            ((GCCRDTItem) this.getOriginRight()).increaseLeftRefrencer();
     }
 
     public void setLevel() {
@@ -64,14 +78,15 @@ public class GCCRDTItem extends CRDTItem {
             int originRightLevel = ((GCCRDTItem) this.getOriginRight()).level;
             if (originLeftLevel == originRightLevel) {
                 this.level = originLeftLevel + 1;
-                ((GCCRDTItem) this.getOriginLeft()).levelBase = ((GCCRDTItem) this.getOriginRight()).levelBase = true;
+                ((GCCRDTItem) this.getOriginLeft()).setLevelBase(true);
+                ((GCCRDTItem) this.getOriginRight()).setLevelBase(true);
             } else {
                 if (originLeftLevel > originRightLevel) {
                     this.level = originLeftLevel;
-                    ((GCCRDTItem) this.getOriginRight()).levelBase = true;
+                    ((GCCRDTItem) this.getOriginRight()).setLevelBase(true);
                 } else {
                     this.level = originRightLevel;
-                    ((GCCRDTItem) this.getOriginLeft()).levelBase = true;
+                    ((GCCRDTItem) this.getOriginLeft()).setLevelBase(true);
                 }
             }
         }
