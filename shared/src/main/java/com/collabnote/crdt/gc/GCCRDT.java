@@ -183,12 +183,14 @@ public class GCCRDT extends CRDT {
 
     // client gc items expected marked and sorted by deleted group first
     // runs by network thread
-    public boolean GC(List<CRDTItemSerializable> item) {
+    public boolean GC(List<DeleteGroupSerializable> items) {
         ArrayList<GCCRDTItem> delimiters = new ArrayList<>();
-        boolean gcSuccess = true;
+        boolean gcStable = true;
 
-        for (CRDTItemSerializable i : item) {
-            GCCRDTItem fitem = (GCCRDTItem) versionVector.find(i.id);
+        boolean isLeft = true;
+        for (int i = 0; i < items.size();) {
+            CRDTItemSerializable item = isLeft ? items.get(i).leftDeleteGroup : items.get(i).rightDeleteGroup;
+            GCCRDTItem fitem = (GCCRDTItem) versionVector.find(item.id);
             if (fitem == null || fitem.getGc())
                 throw new NoSuchElementException("not expected");
 
@@ -197,148 +199,149 @@ public class GCCRDT extends CRDT {
                 delete(fitem);
 
             delimiters.add(fitem);
+
+            if (!isLeft) {
+                i++;
+            }
+            isLeft = !isLeft;
         }
 
         ArrayList<GCCRDTItem> gcItems = new ArrayList<>(delimiters.size());
         for (int i = 0; i < delimiters.size(); i += 2) {
             GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
-            GCCRDTItem gcItemStart = (GCCRDTItem) gcItemLeftDelimiter.right;
             GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
-            boolean isGcOk = true;
+            boolean isDeleteGroupStable = true;
 
-            GCCRDTItem o = gcItemStart;
-            // gc delete group if not splitted
-            while (o != gcItemRightDelimiter && (isGcOk = !o.isDeleteGroupDelimiter())) {
+            GCCRDTItem o = (GCCRDTItem) gcItemLeftDelimiter.right;
+            // delete group stable if not splitted
+            while (o != gcItemRightDelimiter && (isDeleteGroupStable = !o.isDeleteGroupDelimiter())) {
                 o = (GCCRDTItem) o.right;
             }
 
-            if (isGcOk) {
-                gcItemLeftDelimiter.right = gcItemRightDelimiter;
-                gcItemRightDelimiter.left = gcItemLeftDelimiter;
-                gcItems.add(gcItemStart);
+            if (isDeleteGroupStable) {
+                gcItems.add(gcItemLeftDelimiter);
                 gcItems.add(gcItemRightDelimiter);
             } else {
-                gcSuccess = false;
+                gcStable = false;
             }
         }
 
         // remove vector history without lock, version vector used by network threads
         // operation
         // should be safe
-        ArrayList<GCCRDTItem> conflictedGCItems = new ArrayList<>(delimiters.size());
+        ArrayList<GCCRDTItem> gcDeleteGroup = new ArrayList<>(delimiters.size());
         for (int i = 0; i < gcItems.size(); i += 2) {
-            GCCRDTItem o = (GCCRDTItem) gcItems.get(i);
+            GCCRDTItem leftDelimiter = delimiters.get(i);
             GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+
+            GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
+
+            gcDeleteGroup.add(leftDelimiter);
             while (o != rightdelimiter) {
-                o.setGc(true);
                 // cannot remove level base, and conflicting reference item, only removing when
                 // item is stable in every replica
                 if (!o.getLevelBase() && o.getLeftRefrencer() < 2 && o.getRightRefrencer() < 2) {
+                    o.setGc(true);
+                    o.left.right = o.right;
+                    o.right.left = o.left;
                     versionVector.remove(o);
-                } else
-                    conflictedGCItems.add(o);
+                } else {
+                    gcDeleteGroup.add(o);
+                }
                 o = (GCCRDTItem) o.right;
             }
+            gcDeleteGroup.add(rightdelimiter);
         }
 
-        // scan delimiter gc origin
-        for (int i = 0; i < delimiters.size(); i += 2) {
-            GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
-            GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
-            if (gcItemLeftDelimiter.getOriginRight() != null
-                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).isGarbageCollectable()
-                    && ((GCCRDTItem) gcItemLeftDelimiter.getOriginRight()).getGc()) {
-                gcItemLeftDelimiter.removeOriginRight();
-            }
-            if (gcItemRightDelimiter.getOriginLeft() != null
-                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).isGarbageCollectable()
-                    && ((GCCRDTItem) gcItemRightDelimiter.getOriginLeft()).getGc()) {
-                gcItemRightDelimiter.removeOriginLeft();
-            }
-        }
-
-        // scan conflicted gc item origin
-        for (GCCRDTItem i : conflictedGCItems) {
-            if (i.getOriginRight() != null
-                    && ((GCCRDTItem) i.getOriginRight()).isGarbageCollectable()
-                    && ((GCCRDTItem) i.getOriginRight()).getGc()) {
-                i.removeOriginRight();
-            }
+        // change gc delete group item origin
+        for (GCCRDTItem i : gcDeleteGroup) {
             if (i.getOriginLeft() != null
                     && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginLeft()).getGc()) {
-                i.removeOriginLeft();
+                if (i.left.getOriginRight() != i)
+                    i.changeOriginLeft(i.left);
+                else
+                    // set as a new level starter item
+                    i.changeOriginLeft(i.left.getOriginLeft());
             }
-            i.left = i.right = null;
+            if (i.getOriginRight() != null
+                    && ((GCCRDTItem) i.getOriginRight()).isGarbageCollectable()
+                    && ((GCCRDTItem) i.getOriginRight()).getGc()) {
+                i.changeOriginRight(i.right);
+            }
         }
 
-        return gcSuccess;
+        return gcStable;
     }
 
     // client recover can be run concurrently
     // runs by network thread
-    public void recover(List<CRDTItemSerializable> gcItems, CRDTItemSerializable item) {
-        ArrayList<CRDTItem> recoveredItems = new ArrayList<>(gcItems.size());
+    public void recover(List<DeleteGroupSerializable> deleteGroupItems, CRDTItemSerializable newItem) {
+        ArrayList<CRDTItem> recoveredItems = new ArrayList<>(deleteGroupItems.size());
         ArrayList<CRDTItemSerializable> newItems = new ArrayList<>();
-        if (item != null)
-            newItems.add(item);
+        if (newItem != null)
+            newItems.add(newItem);
 
         // recover state
         GCCRDTItem left = null;
-        for (CRDTItemSerializable i : gcItems) {
-            GCCRDTItem gcItem = null;
-            try {
-                if (versionVector.exists(i.id))
-                    gcItem = (GCCRDTItem) versionVector.find(i.id);
-                else {
-                    newItems.add(i);
-                    gcItems.remove(i);
-                    continue;
+        for (DeleteGroupSerializable deleteGroup : deleteGroupItems) {
+            for (CRDTItemSerializable i : deleteGroup.gcItems) {
+                GCCRDTItem gcItem = null;
+                try {
+                    if (versionVector.exists(i.id))
+                        gcItem = (GCCRDTItem) versionVector.find(i.id);
+                    else {
+                        newItems.add(i);
+                        deleteGroup.gcItems.remove(i);
+                        continue;
+                    }
+                } catch (NoSuchElementException e) {
                 }
-            } catch (NoSuchElementException e) {
-            }
 
-            // expected first left
-            if (left == null) {
+                // expected first left
+                if (left == null) {
+                    if (gcItem == null) {
+                        throw new RuntimeException("unexpected");
+                    }
+                    left = gcItem;
+                }
+
                 if (gcItem == null) {
-                    throw new RuntimeException("unexpected");
+                    gcItem = new GCCRDTItem(
+                            i.content,
+                            i.id,
+                            i.isDeleted,
+                            left,
+                            null);
+                    versionVector.recover(gcItem);
+                } else {
+                    if (gcItem.left == null)
+                        gcItem.left = left;
                 }
+
+                if (left.isDeleted())
+                    left.right = gcItem;
                 left = gcItem;
+
+                recoveredItems.add(gcItem);
             }
-
-            if (gcItem == null) {
-                gcItem = new GCCRDTItem(
-                        i.content,
-                        i.id,
-                        i.isDeleted,
-                        left,
-                        null);
-                versionVector.recover(gcItem);
-            } else {
-                gcItem.setGc(false);
-
-                if (gcItem.left == null)
-                    gcItem.left = left;
-            }
-
-            if (left.isDeleted())
-                left.right = gcItem;
-            left = gcItem;
-
-            recoveredItems.add(gcItem);
         }
 
         // recover state origin
-        for (int i = 0; i < gcItems.size(); i++) {
-            GCCRDTItem bItem = (GCCRDTItem) this.bindItem(gcItems.get(i));
-            CRDTItem recoveredItem = recoveredItems.get(i);
+        int latestCounter = 0;
+        for (DeleteGroupSerializable deleteGroup : deleteGroupItems) {
+            for (int i = 0; i < deleteGroup.gcItems.size(); i++) {
+                GCCRDTItem bItem = (GCCRDTItem) this.bindItem(deleteGroup.gcItems.get(i));
+                CRDTItem recoveredItem = recoveredItems.get(latestCounter + i);
 
-            if (bItem == null || recoveredItem == null)
-                throw new NoSuchElementException("unexpected");
+                if (bItem == null || recoveredItem == null)
+                    throw new NoSuchElementException("unexpected");
 
-            // fix existing item, like delimiter
-            recoveredItem.setOrigin(bItem.getOriginLeft(), bItem.getOriginRight());
-            recoveredItem.setDeleted();
+                // fix existing item, like delimiter
+                recoveredItem.setOrigin(bItem.getOriginLeft(), bItem.getOriginRight());
+                recoveredItem.setDeleted();
+            }
+            latestCounter += deleteGroup.gcItems.size() - 1;
         }
 
         // concurrently split gc item to optimize soon

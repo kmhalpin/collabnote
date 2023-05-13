@@ -74,8 +74,6 @@ public class ClientHandler extends Thread {
                                 sendData(DataPayload.donePayload(data.getCrdtItem()));
                             }
                             break;
-                        case DONE:
-                            break;
 
                         // connection onboarding
                         case SHARE:
@@ -123,6 +121,10 @@ public class ClientHandler extends Thread {
 
                                 sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
                             }
+                            break;
+
+                        // gc manager
+                        case GC:
                             break;
                         default:
                             break;

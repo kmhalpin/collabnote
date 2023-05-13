@@ -4,13 +4,14 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.gc.DeleteGroupSerializable;
 
 public class DataPayload implements Serializable {
     private int agent;
     private Type type;
     private String shareID;
     private CRDTItemSerializable crdtItem;
-    private List<CRDTItemSerializable> crdtList;
+    private List<DeleteGroupSerializable> deleteGroupList;
     private int caretIndex;
 
     public static DataPayload insertPayload(String shareID, CRDTItemSerializable crdtItem) {
@@ -29,22 +30,22 @@ public class DataPayload implements Serializable {
         return new DataPayload(Type.CARET, shareID, null, caretIndex, null);
     }
 
-    public static DataPayload gcPayload(String shareID, List<CRDTItemSerializable> items) {
+    public static DataPayload gcPayload(String shareID, List<DeleteGroupSerializable> items) {
         return new DataPayload(Type.GC, shareID, null, 0, items);
     }
 
     public static DataPayload recoverPayload(String shareID, CRDTItemSerializable insertItem,
-            List<CRDTItemSerializable> items) {
+            List<DeleteGroupSerializable> items) {
         return new DataPayload(Type.RECOVER, shareID, insertItem, 0, items);
     }
 
     public DataPayload(Type type, String shareID, CRDTItemSerializable crdtItem, int caretIndex,
-            List<CRDTItemSerializable> crdtList) {
+            List<DeleteGroupSerializable> deleteGroupList) {
         this.type = type;
         this.shareID = shareID;
         this.crdtItem = crdtItem;
         this.caretIndex = caretIndex;
-        this.crdtList = crdtList;
+        this.deleteGroupList = deleteGroupList;
     }
 
     public int getAgent() {
@@ -71,7 +72,7 @@ public class DataPayload implements Serializable {
         return caretIndex;
     }
 
-    public List<CRDTItemSerializable> getCrdtList() {
-        return crdtList;
+    public List<DeleteGroupSerializable> getDeleteGroupList() {
+        return deleteGroupList;
     }
 }

@@ -214,13 +214,13 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 this.collaborationListener.collaborationStatusListener(true);
                 break;
             case GC:
-                boolean success = ((GCCRDT) this.documentEntity.getCrdtReplica()).GC(data.getCrdtList());
+                boolean success = ((GCCRDT) this.documentEntity.getCrdtReplica()).GC(data.getDeleteGroupList());
                 if (success) {
                     this.collaborationRepository.sendGCAck(this.documentEntity.getShareID());
                 }
                 break;
             case RECOVER:
-                ((GCCRDT) this.documentEntity.getCrdtReplica()).recover(data.getCrdtList(), data.getCrdtItem());
+                ((GCCRDT) this.documentEntity.getCrdtReplica()).recover(data.getDeleteGroupList(), data.getCrdtItem());
                 break;
             default:
                 break;

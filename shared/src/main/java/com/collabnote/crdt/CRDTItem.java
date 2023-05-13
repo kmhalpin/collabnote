@@ -58,4 +58,12 @@ public class CRDTItem implements Serializable {
         this.originRight = null;
     }
 
+    public void changeOriginLeft(CRDTItem originLeft) {
+        this.originLeft = originLeft;
+    }
+
+    public void changeOriginRight(CRDTItem originRight) {
+        this.originRight = originRight;
+    }
+
 }

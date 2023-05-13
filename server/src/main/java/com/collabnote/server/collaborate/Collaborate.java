@@ -32,6 +32,10 @@ public class Collaborate {
         }
     }
 
+    public int getClients() {
+        return clients.size();
+    }
+
     public void delete(CRDTItemSerializable item) {
         this.docMaster.tryRemoteDelete(item);
     }
