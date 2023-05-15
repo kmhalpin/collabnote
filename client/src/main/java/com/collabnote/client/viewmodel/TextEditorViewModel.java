@@ -1,6 +1,7 @@
 package com.collabnote.client.viewmodel;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,8 @@ import org.apache.commons.lang3.RandomUtils;
 
 import com.collabnote.client.data.CollaborationRepository;
 import com.collabnote.client.data.DocumentModel;
+import com.collabnote.client.data.StateVisual;
+import com.collabnote.client.data.StateVisualListener;
 import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.document.CRDTDocument;
@@ -19,6 +22,7 @@ import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.crdt.CRDTLocalListener;
 import com.collabnote.socket.DataPayload;
+import com.collabnote.socket.Type;
 
 public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListener {
     // user id
@@ -31,8 +35,11 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     // data listener
     private TextEditorViewModelCaretListener caretListener;
     private TextEditorViewModelCollaborationListener collaborationListener;
+    private TextEditorViewModelImageListener imageListener;
 
     private DocumentEntity documentEntity;
+
+    private StateVisual stateVisual;
 
     public TextEditorViewModel(CRDTDocument document) {
         this.collaborationRepository = new CollaborationRepository();
@@ -48,8 +55,47 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         this.caretListener = caretListener;
     }
 
+    public void setImageListener(TextEditorViewModelImageListener imageListener) {
+        this.imageListener = imageListener;
+    }
+
+    public void setStateVisualizer() throws IOException {
+        if (this.stateVisual != null) {
+            unsetStateVisualizer();
+            return;
+        }
+
+        if (this.documentEntity == null || this.imageListener == null)
+            return;
+
+        this.stateVisual = new StateVisual(this.documentEntity.getCrdtReplica(), new StateVisualListener() {
+
+            @Override
+            public void updateImage(byte[] image) {
+                imageListener.updateImage(image);
+            }
+
+        });
+    }
+
+    public void unsetStateVisualizer() {
+        if (this.stateVisual == null)
+            return;
+
+        try {
+            this.stateVisual.close();
+            this.stateVisual = null;
+            imageListener.updateImage(null);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     // create new document
     public DocumentEntity initDocument(CRDTDocument document) {
+        if (this.stateVisual != null)
+            unsetStateVisualizer();
+
         if (this.collaborationRepository.isConnected())
             this.collaborationRepository.closeConnection();
 
@@ -135,6 +181,9 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     // local CRDT update listener
     @Override
     public void afterLocalCRDTInsert(CRDTItem item) {
+        if (this.stateVisual != null)
+            this.stateVisual.triggerRender();
+
         if (!this.documentEntity.isCollaborating())
             return;
 
@@ -147,6 +196,9 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     @Override
     public void afterLocalCRDTDelete(List<CRDTItem> item) {
+        if (this.stateVisual != null)
+            this.stateVisual.triggerRender();
+
         if (!this.documentEntity.isCollaborating())
             return;
 
@@ -225,6 +277,12 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             default:
                 break;
         }
+        if (this.stateVisual != null
+                && (data.getType() == Type.INSERT
+                        || data.getType() == Type.DELETE
+                        || data.getType() == Type.GC
+                        || data.getType() == Type.RECOVER))
+            this.stateVisual.triggerRender();
     }
 
     @Override

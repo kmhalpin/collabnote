@@ -2,6 +2,11 @@ package com.collabnote.crdt;
 
 import java.io.Serializable;
 
+import guru.nidi.graphviz.attribute.Color;
+import guru.nidi.graphviz.attribute.Label;
+import guru.nidi.graphviz.model.Factory;
+import guru.nidi.graphviz.model.Node;
+
 public class CRDTItem implements Serializable {
     public String content;
     public CRDTID id;
@@ -10,6 +15,8 @@ public class CRDTItem implements Serializable {
     private boolean isDeleted;
     public CRDTItem left;
     public CRDTItem right;
+
+    public Node node;
 
     public CRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
@@ -20,6 +27,7 @@ public class CRDTItem implements Serializable {
         this.isDeleted = isDeleted;
         this.left = left;
         this.right = right;
+        this.node = Factory.node(this.id.agent + "-" + this.id.seq).with(Label.of(content));
     }
 
     public CRDTItemSerializable serialize() {
@@ -35,6 +43,8 @@ public class CRDTItem implements Serializable {
 
     public void setDeleted() {
         this.isDeleted = true;
+        if (node != null)
+            this.node = this.node.with(Color.RED);
     }
 
     public CRDTItem getOriginLeft() {

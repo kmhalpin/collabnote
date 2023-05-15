@@ -6,6 +6,9 @@ import com.collabnote.crdt.CRDTID;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 
+import guru.nidi.graphviz.attribute.Color;
+import guru.nidi.graphviz.attribute.Label;
+
 public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
     public GCCRDTItem leftDeleteGroup;
@@ -90,6 +93,8 @@ public class GCCRDTItem extends CRDTItem {
                 }
             }
         }
+        if (node != null)
+            this.node = this.node.with(Label.of(content + " " + level));
     }
 
     public boolean isGarbageCollectable() {
@@ -106,6 +111,8 @@ public class GCCRDTItem extends CRDTItem {
 
         if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
                 || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
+            if (this.node != null)
+                this.node = this.node.with(Color.BLUE);
             return;
         }
 
@@ -117,6 +124,8 @@ public class GCCRDTItem extends CRDTItem {
 
             if (gci != this.rightDeleteGroup) {
                 gci.rightDeleteGroup = gci.leftDeleteGroup = null;
+                if (gci.node != null)
+                    gci.node = gci.node.with(Color.BLUE);
             }
 
             this.rightDeleteGroup.leftDeleteGroup = this;
@@ -128,6 +137,8 @@ public class GCCRDTItem extends CRDTItem {
 
             if (gci != this.leftDeleteGroup) {
                 gci.rightDeleteGroup = gci.leftDeleteGroup = null;
+                if (gci.node != null)
+                    gci.node = gci.node.with(Color.BLUE);
             }
 
             this.leftDeleteGroup.rightDeleteGroup = this;
@@ -138,6 +149,8 @@ public class GCCRDTItem extends CRDTItem {
             this.rightDeleteGroup.leftDeleteGroup = this.leftDeleteGroup;
 
             this.rightDeleteGroup = this.leftDeleteGroup = null;
+            if (this.node != null)
+                this.node = this.node.with(Color.BLUE);
         }
     }
 
@@ -217,6 +230,11 @@ public class GCCRDTItem extends CRDTItem {
             oldRightDeleteGroup.leftDeleteGroup = gcItemRight;
             gcItemRight.rightDeleteGroup = oldRightDeleteGroup;
             gcItemRight.leftDeleteGroup = gcItemRight;
+
+            if (gcItemLeft.node != null)
+                gcItemLeft.node = gcItemLeft.node.with(Color.RED);
+            if (gcItemRight.node != null)
+                gcItemRight.node = gcItemRight.node.with(Color.RED);
         }
     }
 

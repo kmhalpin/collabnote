@@ -7,8 +7,11 @@ import javax.swing.GroupLayout.Alignment;
 import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
 
+import java.awt.Dimension;
+
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 
 import mdlaf.MaterialLookAndFeel;
 import mdlaf.themes.JMarsDarkTheme;
@@ -24,6 +27,7 @@ public class MainFrame extends JFrame {
 
     private GroupLayout gLayout;
     private EditorPanel editorPanel;
+    private JScrollPane stateVisual;
 
     public MainFrame() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -40,16 +44,23 @@ public class MainFrame extends JFrame {
 
         editorPanel = new EditorPanel(viewModel, document);
 
+        stateVisual = new JScrollPane(new StateVisual(viewModel));
+        stateVisual.setPreferredSize(new Dimension(200, 200));
+
+        gLayout.setAutoCreateGaps(true);
+        gLayout.setAutoCreateContainerGaps(true);
         gLayout.setHorizontalGroup(
                 gLayout.createSequentialGroup()
-                        .addContainerGap(60, Short.MAX_VALUE)
-                        .addGroup(gLayout.createParallelGroup(Alignment.CENTER)
+                        .addGroup(gLayout.createParallelGroup(Alignment.LEADING)
                                 .addComponent(editorPanel))
-                        .addContainerGap(60, Short.MAX_VALUE));
+                        .addGroup(gLayout.createParallelGroup(Alignment.TRAILING)
+                                .addComponent(stateVisual)));
 
         gLayout.setVerticalGroup(
                 gLayout.createSequentialGroup()
-                        .addComponent(editorPanel));
+                        .addGroup(gLayout.createParallelGroup(Alignment.BASELINE)
+                                .addComponent(editorPanel)
+                                .addComponent(stateVisual)));
 
         getContentPane().add(editorPanel);
 

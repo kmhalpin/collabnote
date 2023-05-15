@@ -3,6 +3,7 @@ package com.collabnote.client.ui;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.JFileChooser;
 import javax.swing.JMenu;
@@ -93,12 +94,17 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
         fileMenu.add(fileShareItem);
         fileMenu.add(fileConnectItem);
 
-        accountPrint = new JMenuItem("Print");
+        accountPrint = new JMenuItem("Toggle Visualize State");
         accountPrint.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
                 // controller.printCRDT();
+                try {
+                    viewModel.setStateVisualizer();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
         });
 
