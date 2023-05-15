@@ -18,6 +18,7 @@ public class GCCRDTItem extends CRDTItem {
     // 2 = levelBase
     // 4-8 = conflictReferenceLeft (mask = 12)
     // 16-32 = conflictReferenceRight (mask = 48)
+    // 64 unused
     public byte flags;
 
     // used to mark gc

@@ -233,6 +233,7 @@ public class GCCRDT extends CRDT {
         for (int i = 0; i < gcItems.size(); i += 2) {
             GCCRDTItem leftDelimiter = delimiters.get(i);
             GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+            // delimiter, level base, conflicted item origin, must set gc to false
             leftDelimiter.setGc(false);
             rightdelimiter.setGc(false);
 
@@ -249,9 +250,7 @@ public class GCCRDT extends CRDT {
                     versionVector.remove(o);
                 } else {
                     o.setGc(false);
-                    // TODO: set flag item is not gc'ed
                     gcDeleteGroup.add(o);
-                    System.out.println("WHAT " + o.content);
                 }
                 o = (GCCRDTItem) o.right;
             }
@@ -317,6 +316,8 @@ public class GCCRDT extends CRDT {
                                 i.isDeleted,
                                 left,
                                 null);
+                        // set gc to flag item was gc
+                        gcItem.setGc(true);
                         versionVector.recover(gcItem);
                     } else {
                         gcItem.left = left;
@@ -336,6 +337,9 @@ public class GCCRDT extends CRDT {
             for (int i = 0; i < deleteGroup.gcItems.size(); i++) {
                 GCCRDTItem recoveredItem = recoveredItems.get(latestCounter + i);
 
+                if (recoveredItem == null)
+                    throw new NoSuchElementException("unexpected");
+
                 CRDTID leftId = deleteGroup.gcItems.get(i).originLeft;
                 if (leftId != null && !versionVector.exists(leftId))
                     throw new NoSuchElementException("unexpected");
@@ -346,28 +350,31 @@ public class GCCRDT extends CRDT {
                     throw new NoSuchElementException("unexpected");
                 GCCRDTItem itemOriginRight = rightId != null ? (GCCRDTItem) versionVector.find(rightId) : null;
 
-                if (recoveredItem == null)
-                    throw new NoSuchElementException("unexpected");
-
                 // fix existing item, like delimiter
                 recoveredItem.changeOriginLeft(itemOriginLeft);
                 recoveredItem.changeOriginRight(itemOriginRight);
-                if (recoveredItem.isDeleteGroupDelimiter())
-                    continue;
 
-                recoveredItem.setLevel();
-                if (itemOriginLeft != null && !itemOriginLeft.isDeleteGroupDelimiter()
-                        && itemOriginLeft.level == recoveredItem.level) {
+                // recover gc item level and its origin level base
+                if (recoveredItem.getGc())
+                    recoveredItem.setLevel();
+
+                // recover gc item references status
+                if (itemOriginLeft != null && itemOriginLeft.level == recoveredItem.level
+                        && itemOriginLeft.getGc())
                     itemOriginLeft.increaseRightRefrencer();
-                }
-                if (itemOriginRight != null && !itemOriginRight.isDeleteGroupDelimiter()
-                        && itemOriginRight.level == recoveredItem.level) {
+
+                if (itemOriginRight != null && itemOriginRight.level == recoveredItem.level
+                        && itemOriginRight.getGc())
                     itemOriginRight.increaseLeftRefrencer();
-                }
+
+                // recover delete group
                 recoveredItem.setDeleted();
             }
             latestCounter += deleteGroup.gcItems.size() - 1;
         }
+
+        for (GCCRDTItem i : recoveredItems)
+            i.setGc(false);
 
         // concurrently split gc item to optimize soon
 
