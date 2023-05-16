@@ -17,6 +17,7 @@ import com.collabnote.client.data.StateVisualListener;
 import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.crdt.gc.DeleteGroupSerializable;
 import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
@@ -266,9 +267,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 this.collaborationListener.collaborationStatusListener(true);
                 break;
             case GC:
-                boolean success = ((GCCRDT) this.documentEntity.getCrdtReplica()).GC(data.getDeleteGroupList());
-                if (success) {
-                    this.collaborationRepository.sendGCAck(this.documentEntity.getShareID());
+                List<DeleteGroupSerializable> success = ((GCCRDT) this.documentEntity.getCrdtReplica())
+                        .GC(data.getDeleteGroupList());
+                if (success.size() > 0) {
+                    this.collaborationRepository.sendGCAck(this.documentEntity.getShareID(), success);
                 }
                 break;
             case RECOVER:

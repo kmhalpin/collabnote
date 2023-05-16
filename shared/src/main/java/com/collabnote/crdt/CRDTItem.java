@@ -43,8 +43,6 @@ public class CRDTItem implements Serializable {
 
     public void setDeleted() {
         this.isDeleted = true;
-        if (node != null)
-            this.node = this.node.with(Color.RED);
     }
 
     public CRDTItem getOriginLeft() {
@@ -74,6 +72,13 @@ public class CRDTItem implements Serializable {
 
     public void changeOriginRight(CRDTItem originRight) {
         this.originRight = originRight;
+    }
+
+    public Node renderNode() {
+        Node node = this.node;
+        if (this.isDeleted)
+            node = node.with(Color.RED);
+        return node;
     }
 
 }

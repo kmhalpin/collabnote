@@ -42,7 +42,7 @@ public class StateVisual implements Closeable {
                             render = false;
                             listener.updateImage(generateGraph());
                         }
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } while (!closed);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -68,12 +68,14 @@ public class StateVisual implements Closeable {
 
         CRDTItem o = this.crdt.getStart();
         while (o != null) {
-            pureNodeList.add(o.node.link(
-                    to(o.getOriginLeft() != null ? o.getOriginLeft().node : nullStart).with(Style.BOLD, Color.RED,
+            pureNodeList.add(o.renderNode().link(
+                    to(o.getOriginLeft() != null ? o.getOriginLeft().renderNode() : nullStart).with(Style.BOLD,
+                            Color.RED,
                             Label.of("ol")),
-                    to(o.getOriginRight() != null ? o.getOriginRight().node : nullEnd).with(Style.BOLD, Color.RED,
+                    to(o.getOriginRight() != null ? o.getOriginRight().renderNode() : nullEnd).with(Style.BOLD,
+                            Color.RED,
                             Label.of("or")),
-                    o.right != null ? o.right.node : nullEnd));
+                    o.right != null ? o.right.renderNode() : nullEnd));
             o = o.right;
         }
         pureNodeList.add(0, nullStart);

@@ -2,12 +2,14 @@ package com.collabnote.client.data;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.gc.DeleteGroupSerializable;
 import com.collabnote.socket.DataPayload;
 import com.collabnote.socket.Type;
 
@@ -34,11 +36,11 @@ public class CollaborationRepository {
         this.socket.sendData(DataPayload.caretPayload(shareID, index));
     }
 
-    public void sendGCAck(String shareID) {
+    public void sendGCAck(String shareID, List<DeleteGroupSerializable> stable) {
         if (!isConnected())
             return;
 
-        this.socket.sendData(DataPayload.gcPayload(shareID, null));
+        this.socket.sendData(DataPayload.gcPayload(shareID, stable));
     }
 
     public void sendInsert(String shareID, CRDTItemSerializable crdtItem) {

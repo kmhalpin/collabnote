@@ -8,6 +8,7 @@ import com.collabnote.crdt.CRDTItemSerializable;
 
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.attribute.Label;
+import guru.nidi.graphviz.model.Node;
 
 public class GCCRDTItem extends CRDTItem {
     public GCCRDTItem rightDeleteGroup;
@@ -18,8 +19,18 @@ public class GCCRDTItem extends CRDTItem {
     // 2 = levelBase
     // 4-8 = conflictReferenceLeft (mask = 12)
     // 16-32 = conflictReferenceRight (mask = 48)
-    // 64 unused
+    // 64 = server gc delete group marking
     public byte flags;
+
+    // used by server to mark gc able item
+    public boolean getServerGc() {
+        return (this.flags & 64) > 0;
+    }
+
+    public void setServerGc(boolean gc) {
+        if (this.getServerGc() != gc)
+            this.flags ^= 64;
+    }
 
     // used to mark gc
     public boolean getGc() {
@@ -94,8 +105,6 @@ public class GCCRDTItem extends CRDTItem {
                 }
             }
         }
-        if (node != null)
-            this.node = this.node.with(Label.of(content + " " + level));
     }
 
     public boolean isGarbageCollectable() {
@@ -112,8 +121,6 @@ public class GCCRDTItem extends CRDTItem {
 
         if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
                 || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
-            if (this.node != null)
-                this.node = this.node.with(Color.BLUE);
             return;
         }
 
@@ -125,8 +132,6 @@ public class GCCRDTItem extends CRDTItem {
 
             if (gci != this.rightDeleteGroup) {
                 gci.rightDeleteGroup = gci.leftDeleteGroup = null;
-                if (gci.node != null)
-                    gci.node = gci.node.with(Color.BLUE);
             }
 
             this.rightDeleteGroup.leftDeleteGroup = this;
@@ -138,8 +143,6 @@ public class GCCRDTItem extends CRDTItem {
 
             if (gci != this.leftDeleteGroup) {
                 gci.rightDeleteGroup = gci.leftDeleteGroup = null;
-                if (gci.node != null)
-                    gci.node = gci.node.with(Color.BLUE);
             }
 
             this.leftDeleteGroup.rightDeleteGroup = this;
@@ -150,8 +153,6 @@ public class GCCRDTItem extends CRDTItem {
             this.rightDeleteGroup.leftDeleteGroup = this.leftDeleteGroup;
 
             this.rightDeleteGroup = this.leftDeleteGroup = null;
-            if (this.node != null)
-                this.node = this.node.with(Color.BLUE);
         }
     }
 
@@ -231,11 +232,6 @@ public class GCCRDTItem extends CRDTItem {
             oldRightDeleteGroup.leftDeleteGroup = gcItemRight;
             gcItemRight.rightDeleteGroup = oldRightDeleteGroup;
             gcItemRight.leftDeleteGroup = gcItemRight;
-
-            if (gcItemLeft.node != null)
-                gcItemLeft.node = gcItemLeft.node.with(Color.RED);
-            if (gcItemRight.node != null)
-                gcItemRight.node = gcItemRight.node.with(Color.RED);
         }
     }
 
@@ -252,6 +248,21 @@ public class GCCRDTItem extends CRDTItem {
         super.setOrigin(originLeft, originRight);
         this.setLevel();
         this.increaseOriginConflictReference();
+    }
+
+    @Override
+    public Node renderNode() {
+        Node node = this.node;
+        node = node.with(Label.of(content
+                + "\nlv: " + this.level
+                + "\nlb: " + this.getLevelBase()
+                + "\nlc: " + (this.getLeftRefrencer() == 2)
+                + "\nrc: " + (this.getRightRefrencer() == 2)));
+        if (this.isGarbageCollectable())
+            node = node.with(Color.RED);
+        else if (this.isDeleteGroupDelimiter())
+            node = node.with(Color.BLUE);
+        return node;
     }
 
 }

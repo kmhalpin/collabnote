@@ -183,63 +183,45 @@ public class GCCRDT extends CRDT {
 
     // client gc items expected marked and sorted by deleted group first
     // runs by network thread
-    public boolean GC(List<DeleteGroupSerializable> items) {
-        ArrayList<GCCRDTItem> delimiters = new ArrayList<>();
-        boolean gcStable = true;
+    public List<DeleteGroupSerializable> GC(List<DeleteGroupSerializable> items) {
+        List<DeleteGroupSerializable> stableDeleteGroup = new ArrayList<>();
 
-        boolean isLeft = true;
-        for (int i = 0; i < items.size();) {
-            CRDTItemSerializable item = isLeft ? items.get(i).leftDeleteGroup : items.get(i).rightDeleteGroup;
-            GCCRDTItem fitem = (GCCRDTItem) versionVector.find(item.id);
-            if (fitem == null || fitem.getGc())
+        ArrayList<GCCRDTItem> stableDelimiters = new ArrayList<>(items.size() * 2);
+        for (DeleteGroupSerializable i : items) {
+            GCCRDTItem leftDelimiter = (GCCRDTItem) versionVector.find(i.leftDeleteGroup.id);
+            GCCRDTItem rightDelimiter = (GCCRDTItem) versionVector.find(i.rightDeleteGroup.id);
+            if (leftDelimiter.getGc() || rightDelimiter.getGc())
                 throw new NoSuchElementException("not expected");
 
-            // make sure everything deleted
-            if (!fitem.isDeleted())
-                delete(fitem);
-
-            delimiters.add(fitem);
-
-            if (!isLeft) {
-                i++;
-            }
-            isLeft = !isLeft;
-        }
-
-        ArrayList<GCCRDTItem> gcItems = new ArrayList<>(delimiters.size());
-        for (int i = 0; i < delimiters.size(); i += 2) {
-            GCCRDTItem gcItemLeftDelimiter = delimiters.get(i);
-            GCCRDTItem gcItemRightDelimiter = delimiters.get(i + 1);
             boolean isDeleteGroupStable = true;
 
-            GCCRDTItem o = (GCCRDTItem) gcItemLeftDelimiter.right;
+            GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
             // delete group stable if not splitted
-            while (o != gcItemRightDelimiter && (isDeleteGroupStable = !o.isDeleteGroupDelimiter())) {
+            while (o != rightDelimiter && (isDeleteGroupStable = !o.isDeleteGroupDelimiter())) {
                 o = (GCCRDTItem) o.right;
             }
 
             if (isDeleteGroupStable) {
-                gcItems.add(gcItemLeftDelimiter);
-                gcItems.add(gcItemRightDelimiter);
-            } else {
-                gcStable = false;
+                stableDelimiters.add(leftDelimiter);
+                stableDelimiters.add(rightDelimiter);
+                stableDeleteGroup.add(i);
             }
         }
 
         // remove vector history without lock, version vector used by network threads
         // operation
         // should be safe
-        ArrayList<GCCRDTItem> gcDeleteGroup = new ArrayList<>(delimiters.size());
-        for (int i = 0; i < gcItems.size(); i += 2) {
-            GCCRDTItem leftDelimiter = delimiters.get(i);
-            GCCRDTItem rightdelimiter = gcItems.get(i + 1);
+        ArrayList<GCCRDTItem> gcItems = new ArrayList<>(stableDelimiters.size());
+        for (int i = 0; i < stableDelimiters.size(); i += 2) {
+            GCCRDTItem leftDelimiter = stableDelimiters.get(i);
+            GCCRDTItem rightdelimiter = stableDelimiters.get(i + 1);
             // delimiter, level base, conflicted item origin, must set gc to false
             leftDelimiter.setGc(false);
             rightdelimiter.setGc(false);
 
             GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
 
-            gcDeleteGroup.add(leftDelimiter);
+            gcItems.add(leftDelimiter);
             while (o != rightdelimiter) {
                 // cannot remove level base, and conflicting reference item, only removing when
                 // item is stable in every replica
@@ -250,15 +232,15 @@ public class GCCRDT extends CRDT {
                     versionVector.remove(o);
                 } else {
                     o.setGc(false);
-                    gcDeleteGroup.add(o);
+                    gcItems.add(o);
                 }
                 o = (GCCRDTItem) o.right;
             }
-            gcDeleteGroup.add(rightdelimiter);
+            gcItems.add(rightdelimiter);
         }
 
         // change gc delete group item origin
-        for (GCCRDTItem i : gcDeleteGroup) {
+        for (GCCRDTItem i : gcItems) {
             if (i.getOriginLeft() != null
                     && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginLeft()).getGc()) {
@@ -275,7 +257,7 @@ public class GCCRDT extends CRDT {
             }
         }
 
-        return gcStable;
+        return stableDeleteGroup;
     }
 
     // client recover can be run concurrently
@@ -368,7 +350,8 @@ public class GCCRDT extends CRDT {
                     itemOriginRight.increaseLeftRefrencer();
 
                 // recover delete group
-                recoveredItem.setDeleted();
+                if (recoveredItem.isGarbageCollectable())
+                    recoveredItem.setDeleted();
             }
             latestCounter += deleteGroup.gcItems.size() - 1;
         }
