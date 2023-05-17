@@ -17,8 +17,8 @@ public class CRDT {
     // cache last local inserts (unused now)
     protected MarkerManager markerManager;
 
-    ArrayList<CRDTItemSerializable> insertQueue;
-    ArrayList<CRDTItemSerializable> deleteQueue;
+    protected ArrayList<CRDTItemSerializable> insertQueue;
+    protected ArrayList<CRDTItemSerializable> deleteQueue;
 
     protected VersionVectors versionVector;
     protected CRDTItem start;

@@ -27,6 +27,21 @@ public class GCCRDT extends CRDT {
     }
 
     @Override
+    public void tryRemoteDelete(CRDTItemSerializable item) {
+        if (versionVector.exists(item.id)) {
+            CRDTItem bitem = null;
+            try {
+                bitem = versionVector.find(item.id);
+            } catch (NoSuchElementException e) {
+            }
+            if (bitem != null)
+                delete(bitem);
+        } else {
+            deleteQueue.add(item);
+        }
+    }
+
+    @Override
     public CRDTItem bindItem(CRDTItemSerializable item) {
         GCCRDTItem bitem = new GCCRDTItem(
                 item.content,
