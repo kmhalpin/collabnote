@@ -16,8 +16,6 @@ public class CRDTItem implements Serializable {
     public CRDTItem left;
     public CRDTItem right;
 
-    public Node node;
-
     public CRDTItem(String content, CRDTID id, boolean isDeleted,
             CRDTItem left, CRDTItem right) {
         this.content = content;
@@ -27,7 +25,6 @@ public class CRDTItem implements Serializable {
         this.isDeleted = isDeleted;
         this.left = left;
         this.right = right;
-        this.node = Factory.node(this.id.agent + "-" + this.id.seq).with(Label.of(content));
     }
 
     public CRDTItemSerializable serialize() {
@@ -75,7 +72,7 @@ public class CRDTItem implements Serializable {
     }
 
     public Node renderNode() {
-        Node node = this.node;
+        Node node = Factory.node(this.id.agent + "-" + this.id.seq).with(Label.of(content));
         if (this.isDeleted)
             node = node.with(Color.RED);
         return node;

@@ -30,44 +30,53 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                 try {
                     lock.lock();
                     System.out.println("GC START");
-                    List<GCCRDTItem> gcDelimiters = new ArrayList<>();
+                    ArrayList<DeleteGroupSerializable> deleteGroupSerialize = new ArrayList<>();
                     GCCRDTItem ops = (GCCRDTItem) this.crdt.getStart();
 
-                    boolean isInsideDeleteGroup = false;
-                    boolean includeDeleteGroup = false;
-                    while (ops != null) {
+                    boolean isInsideDeleteGroup = false,
+                            includeDeleteGroup = false;
+                    GCCRDTItem leftDelimiter = null,
+                            rightDelimiter = null;
+                    while (true) {
                         // group checking
-                        if (ops.isGarbageCollectable()) {
-                            // set selected delete group operations to gc
-                            includeDeleteGroup = true;
-                            ops.setServerGc(true);
-                        } else if (ops.isDeleteGroupDelimiter()
-                                && ops.leftDeleteGroup != ops.rightDeleteGroup // skip standalone delimiter
-                        ) {
-                            isInsideDeleteGroup = !isInsideDeleteGroup;
-                            if (isInsideDeleteGroup) { // left delimiter
-                                includeDeleteGroup = false;
-                            } else { // right delimiter
-                                if (includeDeleteGroup) {
-                                    gcDelimiters.add(ops.leftDeleteGroup);
-                                    gcDelimiters.add(ops);
-                                    ops.leftDeleteGroup.setServerGc(true);
-                                    ops.setServerGc(true);
-                                }
+                        if (isInsideDeleteGroup)
+                            if (ops != null && ops.isGarbageCollectable()) {
+                                // set selected delete group operations to gc
+                                includeDeleteGroup = true;
+                                ops.setServerGc(true);
+                                rightDelimiter = ops;
+                            } else if (includeDeleteGroup) { // right delimiter decision
+                                boolean includeGcRight = true;
+                                if (!(includeGcRight = !(ops != null && !ops.isDeleteGroupDelimiter())))
+                                    // right is delimiter
+                                    rightDelimiter = ops;
+
+                                leftDelimiter.setServerGc(true);
+                                rightDelimiter.setServerGc(true);
+
+                                System.out.print(leftDelimiter.content + " " + rightDelimiter.content + ", ");
+
+                                deleteGroupSerialize.add(new DeleteGroupSerializable(leftDelimiter.serialize(),
+                                        rightDelimiter.serialize(), includeGcRight, null));
+
+                                isInsideDeleteGroup = includeDeleteGroup = false;
+                                leftDelimiter = rightDelimiter = null;
+                            } else { // only delimiter
+                                isInsideDeleteGroup = false;
+                                leftDelimiter = null;
                             }
+
+                        if (ops == null)
+                            break;
+
+                        if (!isInsideDeleteGroup && ops.isDeleteGroupDelimiter()) { // left delimiter
+                            isInsideDeleteGroup = true;
+                            leftDelimiter = ops;
                         }
                         ops = (GCCRDTItem) ops.right;
                     }
 
-                    if (gcDelimiters.size() > 0) {
-                        ArrayList<DeleteGroupSerializable> deleteGroupSerialize = new ArrayList<>();
-                        for (int i = 0; i < gcDelimiters.size(); i += 2) {
-                            System.out
-                                    .print(gcDelimiters.get(i).content + " " + gcDelimiters.get(i + 1).content + ", ");
-                            deleteGroupSerialize.add(
-                                    new DeleteGroupSerializable(gcDelimiters.get(i).serialize(),
-                                            gcDelimiters.get(i + 1).serialize(), null));
-                        }
+                    if (deleteGroupSerialize.size() > 0) {
                         System.out.println();
                         // broadcast gc
                         this.collaborate
@@ -120,8 +129,8 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         if (conflictGC.size() > 0) {
             GCCRDTItem l = conflictGC.get(0);
             // only scan if its not left delimiter
-            if (!l.isDeleteGroupDelimiter() || l.leftDeleteGroup != l)
-                while (l.left != null && l.left.isDeleted() && ((GCCRDTItem) l.left).getServerGc()) {
+            if (!l.isDeleteGroupDelimiter())
+                while (l.left != null && ((GCCRDTItem) l.left).getServerGc()) {
                     conflictGC.add(0, (GCCRDTItem) l.left);
                     if (((GCCRDTItem) l.left).isDeleteGroupDelimiter()) {
                         break;
@@ -131,10 +140,10 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
             GCCRDTItem r = conflictGC.get(conflictGC.size() - 1);
             // only scan if its not right delimiter
-            if (!r.isDeleteGroupDelimiter() || r.rightDeleteGroup != r)
-                while (r.right != null && r.right.isDeleted() && ((GCCRDTItem) r.right).getServerGc()) {
+            if (r.isGarbageCollectable())
+                while (r.right != null && ((GCCRDTItem) r.right).getServerGc()) {
                     conflictGC.add((GCCRDTItem) r.right);
-                    if (((GCCRDTItem) r.right).isDeleteGroupDelimiter()) {
+                    if (!((GCCRDTItem) r.right).isGarbageCollectable()) {
                         break;
                     }
                     r = (GCCRDTItem) r.right;
@@ -144,23 +153,30 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         // group
         ArrayList<DeleteGroupSerializable> deleteGroupSerialize = new ArrayList<>();
 
-        boolean isInsideDeleteGroup = false;
         List<CRDTItemSerializable> gcItems = null;
+        boolean isInsideDeleteGroup = false;
         for (GCCRDTItem i : conflictGC) {
             i.setServerGc(false);
-            if (i.isGarbageCollectable()) { // gc items
-                gcItems.add(i.serialize());
-            } else if (i.isDeleteGroupDelimiter()) {
-                isInsideDeleteGroup = !isInsideDeleteGroup;
-                if (isInsideDeleteGroup) { // left delimiter
-                    gcItems = new ArrayList<>();
+
+            if (isInsideDeleteGroup)
+                if (i.isGarbageCollectable()) { // gc items
                     gcItems.add(i.serialize());
                 } else { // right delimiter
-                    gcItems.add(i.serialize());
-                    deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, gcItems));
+                    if (!i.isDeleteGroupDelimiter())
+                        gcItems.add(i.serialize());
+                    deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, false, gcItems));
+                    isInsideDeleteGroup = false;
                 }
+
+            if (!isInsideDeleteGroup && i.isDeleteGroupDelimiter()) { // left delimiter
+                gcItems = new ArrayList<>();
+                gcItems.add(i.serialize());
+                isInsideDeleteGroup = true;
             }
         }
+        // if last item is still inside group, add
+        if (isInsideDeleteGroup)
+            deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, false, gcItems));
 
         return deleteGroupSerialize;
     }

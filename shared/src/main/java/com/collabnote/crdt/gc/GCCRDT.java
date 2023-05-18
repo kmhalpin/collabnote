@@ -1,10 +1,8 @@
 package com.collabnote.crdt.gc;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTID;
@@ -104,83 +102,9 @@ public class GCCRDT extends CRDT {
         // return marker != null ? marker.index + offset : offset;
     }
 
-    // integrate with returning last conflicting delete group
-    private GCCRDTItem GCIntegrate(CRDTItem item) {
-        GCCRDTItem lastGroup = null;
-        if ((item.left == null && (item.right == null || item.right.left != null))
-                || (item.left != null && item.left.right != item.right)) {
-            CRDTItem left = item.left;
-
-            CRDTItem o;
-
-            // start from conflicting item
-            if (item.left != null) {
-                o = left.right;
-            } else {
-                o = this.start;
-            }
-
-            Set<CRDTItem> conflictingItems = new HashSet<>();
-            Set<CRDTItem> itemsBeforeOrigin = new HashSet<>();
-
-            // rule 1 as breaking condition
-            while (o != null && o != item.right) {
-                itemsBeforeOrigin.add(o);
-                conflictingItems.add(o);
-
-                // if item is not deleted, find latest conflicting delete group
-                if (!item.isDeleted() && ((GCCRDTItem) o).isDeleteGroupDelimiter()) {
-                    lastGroup = (GCCRDTItem) o;
-                }
-
-                if (o.getOriginLeft() == item.getOriginLeft()
-                        || (o.getOriginLeft() != null && item.getOriginLeft() != null
-                                && o.getOriginLeft().id.agent == item.getOriginLeft().id.agent
-                                && o.getOriginLeft().id.seq == item.getOriginLeft().id.seq)) {
-                    if (o.id.agent < item.id.agent) {
-                        left = o;
-                        conflictingItems.clear();
-                    } else if (o.getOriginRight() == item.getOriginRight()
-                            || (o.getOriginRight() != null && item.getOriginRight() != null
-                                    && o.getOriginRight().id.agent == item.getOriginRight().id.agent
-                                    && o.getOriginRight().id.seq == item.getOriginRight().id.seq)) {
-                        break;
-                    }
-                } else if (o.getOriginLeft() != null && itemsBeforeOrigin.contains(o.getOriginLeft())) {
-                    if (!conflictingItems.contains(o.getOriginLeft())) {
-                        left = o;
-                        conflictingItems.clear();
-                    }
-                } else {
-                    break;
-                }
-                o = o.right;
-            }
-            item.left = left;
-        }
-
-        // connect linked list
-        if (item.left != null) {
-            CRDTItem right = item.left.right;
-            item.right = right;
-            item.left.right = item;
-        } else {
-            CRDTItem right = this.start;
-            start = item;
-            item.right = right;
-        }
-
-        if (item.right != null) {
-            item.right.left = item;
-        }
-
-        return lastGroup;
-    }
-
     @Override
     protected void integrate(CRDTItem item) {
-        GCCRDTItem lastGroup = this.GCIntegrate(item);
-        ((GCCRDTItem) item).checkSplitGC(lastGroup);
+        super.integrate(item);
         if (item.isDeleted()) {
             item.setDeleted();
         }
@@ -202,17 +126,28 @@ public class GCCRDT extends CRDT {
         List<DeleteGroupSerializable> stableDeleteGroup = new ArrayList<>();
 
         ArrayList<GCCRDTItem> stableDelimiters = new ArrayList<>(items.size() * 2);
+
         for (DeleteGroupSerializable i : items) {
-            GCCRDTItem leftDelimiter = (GCCRDTItem) versionVector.find(i.leftDeleteGroup.id);
-            GCCRDTItem rightDelimiter = (GCCRDTItem) versionVector.find(i.rightDeleteGroup.id);
-            if (leftDelimiter.getGc() || rightDelimiter.getGc())
-                throw new NoSuchElementException("not expected");
+            GCCRDTItem leftDelimiter;
+            GCCRDTItem rightDelimiter;
+            try {
+                leftDelimiter = (GCCRDTItem) versionVector.find(i.leftDeleteGroup.id);
+                if (!leftDelimiter.isDeleted())
+                    delete(leftDelimiter);
+
+                rightDelimiter = (GCCRDTItem) versionVector.find(i.rightDeleteGroup.id);
+
+                if (leftDelimiter.getGc() || rightDelimiter.getGc())
+                    throw new NoSuchElementException("group has been removed");
+            } catch (NoSuchElementException e) {
+                continue;
+            }
 
             boolean isDeleteGroupStable = true;
 
             GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
             // delete group stable if not splitted
-            while (o != rightDelimiter && (isDeleteGroupStable = !o.isDeleteGroupDelimiter())) {
+            while (o != rightDelimiter && (isDeleteGroupStable = o.isGarbageCollectable())) {
                 o = (GCCRDTItem) o.right;
             }
 
@@ -226,36 +161,44 @@ public class GCCRDT extends CRDT {
         // remove vector history without lock, version vector used by network threads
         // operation
         // should be safe
-        ArrayList<GCCRDTItem> gcItems = new ArrayList<>(stableDelimiters.size());
+        ArrayList<GCCRDTItem> unremovable = new ArrayList<>(stableDelimiters.size());
         for (int i = 0; i < stableDelimiters.size(); i += 2) {
             GCCRDTItem leftDelimiter = stableDelimiters.get(i);
             GCCRDTItem rightdelimiter = stableDelimiters.get(i + 1);
+            boolean includeGCRight = stableDeleteGroup.get(i / 2).includeRight;
             // delimiter, level base, conflicted item origin, must set gc to false
             leftDelimiter.setGc(false);
-            rightdelimiter.setGc(false);
+            if (!includeGCRight)
+                rightdelimiter.setGc(false);
 
             GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
 
-            gcItems.add(leftDelimiter);
-            while (o != rightdelimiter) {
+            unremovable.add(leftDelimiter);
+            while (o != rightdelimiter || includeGCRight) {
                 // cannot remove level base, and conflicting reference item, only removing when
                 // item is stable in every replica
                 if (!o.getLevelBase() && o.getLeftRefrencer() < 2 && o.getRightRefrencer() < 2) {
                     o.setGc(true);
                     o.left.right = o.right;
-                    o.right.left = o.left;
+                    if (o.right != null)
+                        o.right.left = o.left;
                     versionVector.remove(o);
                 } else {
                     o.setGc(false);
-                    gcItems.add(o);
+                    unremovable.add(o);
                 }
+
+                if (o == rightdelimiter)
+                    break;
+
                 o = (GCCRDTItem) o.right;
             }
-            gcItems.add(rightdelimiter);
+            if (!includeGCRight)
+                unremovable.add(rightdelimiter);
         }
 
         // change gc delete group item origin
-        for (GCCRDTItem i : gcItems) {
+        for (GCCRDTItem i : unremovable) {
             if (i.getOriginLeft() != null
                     && ((GCCRDTItem) i.getOriginLeft()).isGarbageCollectable()
                     && ((GCCRDTItem) i.getOriginLeft()).getGc()) {
@@ -390,7 +333,7 @@ public class GCCRDT extends CRDT {
             System.out.print("{ "
                     + (i.getOriginLeft() != null ? (i.getOriginLeft().id.agent + "-" + i.getOriginLeft().id.seq) : null)
                     + ", " + i.content + ", "
-                    + (i.rightDeleteGroup != null && i.leftDeleteGroup != null ? "DG" : null) + ", "
+                    + (i.isDeleteGroupDelimiter() ? "DG" : null) + ", "
                     + (i.isDeleted() ? "DELETED" : null) + ", " + i.level
                     + ", "
                     + (i.getOriginRight() != null ? (i.getOriginRight().id.agent + "-" + i.getOriginRight().id.seq)
