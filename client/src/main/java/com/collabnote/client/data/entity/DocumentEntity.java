@@ -22,7 +22,7 @@ public class DocumentEntity {
     }
 
     public DocumentEntitySerializable serialize() {
-        return new DocumentEntitySerializable(crdtReplica.getStart(), crdtReplica.getVersionVector(), shareID, serverHost,
+        return new DocumentEntitySerializable(crdtReplica.getVersionVector().serialize(), shareID, serverHost,
                 operationBuffer);
     }
 
@@ -36,6 +36,10 @@ public class DocumentEntity {
 
     public CRDT getCrdtReplica() {
         return crdtReplica;
+    }
+
+    public void setCrdtReplica(CRDT crdtReplica) {
+        this.crdtReplica = crdtReplica;
     }
 
     public void setCollaboration(String shareID, String serverHost,

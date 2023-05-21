@@ -373,29 +373,6 @@ public class CRDT {
         return list;
     }
 
-    public void loadCRDT(CRDTItem start, VersionVectors versionVectors) {
-        this.insertQueue = new ArrayList<>(0);
-        this.deleteQueue = new ArrayList<>(0);
-        this.start = start;
-        this.versionVector = versionVectors;
-
-        Position p = findPosition(0);
-        while (p.right != null) {
-            this.remoteTransaction.onRemoteCRDTInsert(new Transaction(p.right) {
-                @Override
-                public Pair<Integer, CRDTItem> execute() {
-                    try {
-                        lock.lock();
-                        return new Pair<Integer, CRDTItem>(p.index, p.right);
-                    } finally {
-                        lock.unlock();
-                    }
-                }
-            });
-            p.forward();
-        }
-    }
-
     // follow this alg:
     // https://github.com/josephg/reference-crdts/blob/9f4f9c3a97b497e2df8ae4473d1e521d3c3bf2d2/crdts.ts#L350
 }

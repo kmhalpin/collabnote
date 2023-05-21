@@ -5,7 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.server.collaborate.CollaborateDatabase;
 import com.collabnote.socket.DataPayload;
@@ -115,8 +115,8 @@ public class ClientHandler extends Thread {
                                 this.collaborate.addClient(this);
 
                                 // share server state
-                                for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
-                                    sendData(DataPayload.insertPayload(data.getShareID(), crdtItem.serialize()));
+                                for (CRDTItemSerializable crdtItem : this.collaborate.getVersionVector()) {
+                                    sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
                                 }
 
                                 sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));

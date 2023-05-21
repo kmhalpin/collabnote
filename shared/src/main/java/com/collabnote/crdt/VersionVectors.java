@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
+import java.util.Map.Entry;
 
 // optimized vector clocks
 public class VersionVectors implements Serializable {
@@ -68,5 +69,26 @@ public class VersionVectors implements Serializable {
         }
 
         throw new NoSuchElementException("unexpected");
+    }
+
+    public ArrayList<CRDTItemSerializable> serialize() {
+        ArrayList<CRDTItemSerializable> items = new ArrayList<>();
+        for (Entry<Integer, ArrayList<CRDTItem>> entry : this.versionVector.entrySet()) {
+            int nextseq = 1;
+            for (CRDTItem i : entry.getValue()) {
+                for (int it = nextseq; it < i.id.seq; it++) { // populate removed item with gc item
+                    items.add(new CRDTItemSerializable(
+                            null,
+                            new CRDTID(entry.getKey(), it),
+                            null,
+                            null,
+                            true,
+                            true));
+                }
+                items.add(i.serialize());
+                nextseq = i.id.seq + 1;
+            }
+        }
+        return items;
     }
 }

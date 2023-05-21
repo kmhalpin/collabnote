@@ -4,22 +4,18 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 import com.collabnote.crdt.CRDT;
-import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
-import com.collabnote.crdt.VersionVectors;
 
 public class DocumentEntitySerializable implements Serializable {
-    private CRDTItem crdtStart;
-    private VersionVectors versionVectors;
+    private ArrayList<CRDTItemSerializable> state;
 
     private String shareID;
     private String serverHost;
     private ArrayList<CRDTItemSerializable> operationBuffer;
 
-    public DocumentEntitySerializable(CRDTItem crdtStart, VersionVectors versionVectors, String shareID,
+    public DocumentEntitySerializable(ArrayList<CRDTItemSerializable> state, String shareID,
             String serverHost, ArrayList<CRDTItemSerializable> operationBuffer) {
-        this.crdtStart = crdtStart;
-        this.versionVectors = versionVectors;
+        this.state = state;
         this.shareID = shareID;
         this.serverHost = serverHost;
         this.operationBuffer = operationBuffer;
@@ -27,7 +23,9 @@ public class DocumentEntitySerializable implements Serializable {
 
     public void deserialize(DocumentEntity entity) {
         CRDT crdt = entity.getCrdtReplica();
-        crdt.loadCRDT(this.crdtStart, this.versionVectors);
+        for (CRDTItemSerializable i : state) {
+            crdt.tryRemoteInsert(i);
+        }
 
         entity.setCollaboration(shareID, serverHost, operationBuffer);
     }

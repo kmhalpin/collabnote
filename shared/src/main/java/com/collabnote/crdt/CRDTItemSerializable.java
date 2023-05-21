@@ -8,13 +8,16 @@ public class CRDTItemSerializable implements Serializable {
     public CRDTID originLeft;
     public CRDTID originRight;
     public boolean isDeleted;
+    public boolean isGC;
 
-    public CRDTItemSerializable(String content, CRDTID id, CRDTID originLeft, CRDTID originRight, boolean isDeleted) {
+    public CRDTItemSerializable(String content, CRDTID id, CRDTID originLeft, CRDTID originRight, boolean isDeleted,
+            boolean isGC) {
         this.content = content;
         this.id = id;
         this.originLeft = originLeft;
         this.originRight = originRight;
         this.isDeleted = isDeleted;
+        this.isGC = isGC;
     }
 
     @Override

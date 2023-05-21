@@ -48,6 +48,12 @@ public class GCCRDT extends CRDT {
                 null,
                 null);
 
+        // make stable gc'ed item to increase vector version only
+        if (item.isGC) {
+            bitem.setServerGc(true);
+            return bitem;
+        }
+
         return this.bindItem(item, bitem);
     }
 
@@ -104,10 +110,10 @@ public class GCCRDT extends CRDT {
 
     @Override
     protected void integrate(CRDTItem item) {
-        super.integrate(item);
-        if (item.isDeleted()) {
-            item.setDeleted();
+        if (((GCCRDTItem) item).getServerGc()) {
+            return;
         }
+        super.integrate(item);
     }
 
     @Override

@@ -90,14 +90,12 @@ public class GCCRDTItem extends CRDTItem {
                 this.level = originLeftLevel + 1;
                 ((GCCRDTItem) this.getOriginLeft()).setLevelBase(true);
                 ((GCCRDTItem) this.getOriginRight()).setLevelBase(true);
+            } else if (originLeftLevel > originRightLevel) {
+                this.level = originLeftLevel;
+                ((GCCRDTItem) this.getOriginRight()).setLevelBase(true);
             } else {
-                if (originLeftLevel > originRightLevel) {
-                    this.level = originLeftLevel;
-                    ((GCCRDTItem) this.getOriginRight()).setLevelBase(true);
-                } else {
-                    this.level = originRightLevel;
-                    ((GCCRDTItem) this.getOriginLeft()).setLevelBase(true);
-                }
+                this.level = originRightLevel;
+                ((GCCRDTItem) this.getOriginLeft()).setLevelBase(true);
             }
         }
     }
@@ -109,16 +107,6 @@ public class GCCRDTItem extends CRDTItem {
     public boolean isDeleteGroupDelimiter() {
         return super.isDeleted()
                 && (this.left == null || !this.left.isDeleted() || this.level != ((GCCRDTItem) this.left).level);
-    }
-
-    @Override
-    public void setDeleted() {
-        super.setDeleted();
-
-        if ((super.right != null && ((GCCRDTItem) super.right).isGarbageCollectable())
-                || (super.left != null && ((GCCRDTItem) super.left).isGarbageCollectable())) {
-            return;
-        }
     }
 
     // remove entire delete group in a level and merge top level delete group
@@ -151,7 +139,8 @@ public class GCCRDTItem extends CRDTItem {
         return new CRDTItemSerializable(this.content, this.id,
                 this.getOriginLeft() != null ? this.getOriginLeft().id : null,
                 this.getOriginRight() != null ? this.getOriginRight().id : null,
-                this.isDeleted());
+                this.isDeleted(),
+                this.getGc());
     }
 
     @Override
@@ -166,9 +155,9 @@ public class GCCRDTItem extends CRDTItem {
         Node node = super.renderNode();
         node = node.with(Label.of(content
                 + "\nlv: " + this.level
-                + "\nlb: " + this.getLevelBase()
-                + "\nlc: " + (this.getLeftRefrencer() == 2)
-                + "\nrc: " + (this.getRightRefrencer() == 2)));
+                + "\nlb: " + (this.getLevelBase() ? "t" : "f")
+                + "\nc: " + (this.getLeftRefrencer() == 2 ? "l" : "")
+                + "-" + (this.getRightRefrencer() == 2 ? "r" : "")));
         if (this.isGarbageCollectable())
             node = node.with(Color.RED);
         else if (this.isDeleteGroupDelimiter())

@@ -1,13 +1,11 @@
 package com.collabnote.crdt;
 
-import java.io.Serializable;
-
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.model.Factory;
 import guru.nidi.graphviz.model.Node;
 
-public class CRDTItem implements Serializable {
+public class CRDTItem {
     public String content;
     public CRDTID id;
     private CRDTItem originLeft;
@@ -31,7 +29,7 @@ public class CRDTItem implements Serializable {
         return new CRDTItemSerializable(this.content,
                 this.id,
                 this.originLeft == null ? null : this.originLeft.id,
-                this.originRight == null ? null : this.originRight.id, isDeleted);
+                this.originRight == null ? null : this.originRight.id, isDeleted, false);
     }
 
     public boolean isDeleted() {
