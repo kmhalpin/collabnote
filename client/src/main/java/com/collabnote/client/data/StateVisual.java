@@ -42,7 +42,7 @@ public class StateVisual implements Closeable {
                             render = false;
                             listener.updateImage(generateGraph());
                         }
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } while (!closed);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
