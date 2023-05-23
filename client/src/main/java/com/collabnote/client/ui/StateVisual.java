@@ -9,15 +9,13 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
-import com.collabnote.client.viewmodel.TextEditorViewModel;
 import com.collabnote.client.viewmodel.TextEditorViewModelImageListener;
 
 public class StateVisual extends JPanel implements TextEditorViewModelImageListener {
     BufferedImage image;
 
-    public StateVisual(TextEditorViewModel viewModel) {
+    public StateVisual() {
         this.image = null;
-        viewModel.setImageListener(this);
     }
 
     @Override

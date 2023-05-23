@@ -80,6 +80,7 @@ public class CollaborationRepository {
                 }
 
                 if (data.getType() == Type.SHARE) {
+                    mainListener.onReceiveData(data);
                     // if no operation to sent, send ready connect
                     if (operationBuffer.size() == 0) {
                         socket.sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
@@ -96,6 +97,7 @@ public class CollaborationRepository {
                     // if all operation sent, send ready connect
                     if (operationBuffer.size() == 0) {
                         socket.sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                        return;
                     }
                 }
 
@@ -138,7 +140,7 @@ public class CollaborationRepository {
                     return;
                 }
 
-                if (data.getType() == Type.SHARE) {
+                if (data.getType() == Type.CONNECT) {
                     mainListener.onReceiveData(data);
                     System.out.println(data.getShareID());
                     isReady = true;

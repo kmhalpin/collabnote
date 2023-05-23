@@ -11,7 +11,6 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 
-import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
 import com.collabnote.client.viewmodel.TextEditorViewModelCollaborationListener;
 
@@ -20,7 +19,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
     private JMenuItem fileNewItem, fileSaveItem, fileLoadItem, fileShareItem, fileConnectItem, accountPrint,
             accountOfflineToggle;
 
-    public Menu(TextEditorViewModel viewModel, CRDTDocument crdtDocument) {
+    public Menu(TextEditorViewModel viewModel) {
         viewModel.setCollaborationListener(this);
 
         fileMenu = new JMenu("File");
@@ -31,7 +30,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
         fileNewItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                viewModel.initDocument(crdtDocument);
+                viewModel.initDocument();
             }
         });
 
@@ -62,7 +61,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
                 int result = fileChooser.showOpenDialog(null);
                 if (result == JFileChooser.APPROVE_OPTION) {
                     File file = fileChooser.getSelectedFile();
-                    viewModel.loadDocument(crdtDocument, file);
+                    viewModel.loadDocument(file);
                 }
             }
         });
@@ -84,7 +83,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
                 String host = JOptionPane.showInputDialog("Enter collaboration server host");
                 String shareID = JOptionPane.showInputDialog("Enter collaboration ID");
                 if (host != null && !host.isEmpty() && shareID != null && !shareID.isEmpty())
-                    viewModel.connectDocument(crdtDocument, host, shareID);
+                    viewModel.connectDocument(host, shareID);
             }
         });
 
@@ -113,7 +112,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                viewModel.toggleConnection(crdtDocument);
+                viewModel.toggleConnection();
             }
 
         });

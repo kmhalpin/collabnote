@@ -91,7 +91,7 @@ public class ClientHandler extends Thread {
                                 this.state = ClientState.READY;
                                 this.collaborate.addClient(this);
 
-                                sendData(new DataPayload(Type.SHARE, shareID, null, 0, null));
+                                sendData(new DataPayload(Type.CONNECT, shareID, null, 0, null));
                             } else if (this.state == ClientState.READY) {
                                 this.collaborate.setReady(true);
                             }
@@ -107,7 +107,7 @@ public class ClientHandler extends Thread {
                                     this.state = ClientState.READY;
 
                                     // send to client to share their changes
-                                    sendData(new DataPayload(Type.SHARE, data.getShareID(), null, 0, null));
+                                    sendData(new DataPayload(Type.SHARE, this.collaborate.shareID, null, 0, null));
                                 } else {
                                     this.clientSocket.close();
                                 }
@@ -116,10 +116,10 @@ public class ClientHandler extends Thread {
 
                                 // share server state
                                 for (CRDTItemSerializable crdtItem : this.collaborate.getVersionVector()) {
-                                    sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
+                                    sendData(DataPayload.insertPayload(this.collaborate.shareID, crdtItem));
                                 }
 
-                                sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0, null));
+                                sendData(new DataPayload(Type.CONNECT, this.collaborate.shareID, null, 0, null));
                             }
                             break;
 

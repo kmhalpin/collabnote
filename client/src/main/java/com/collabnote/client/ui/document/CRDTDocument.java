@@ -16,8 +16,25 @@ import com.collabnote.crdt.Transaction;
 public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteTransaction {
     private CRDT crdt;
 
-    public void setCrdt(CRDT crdt) {
-        this.crdt = crdt;
+    public void bindCrdt(CRDT crdt) {
+        try {
+            this.writeLock();
+
+            int length = this.getLength();
+            DefaultDocumentEvent e = new CRDTDocumentEvent(0, length, DocumentEvent.EventType.REMOVE);
+            this.removeUpdate(e);
+            this.getContent().remove(0, length);
+            this.postRemoveUpdate(e);
+            e.end();
+
+            this.fireRemoveUpdate(e);
+
+            this.crdt = crdt;
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        } finally {
+            this.writeUnlock();
+        }
     }
 
     public CRDTDocument() {
@@ -81,8 +98,10 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
         }
     }
 
+    // write locked from caller
     @Override
     public void insertUpdate(DocumentEvent e) {
+        // local update listener only
         if (e instanceof CRDTDocumentEvent) {
             return;
         }
