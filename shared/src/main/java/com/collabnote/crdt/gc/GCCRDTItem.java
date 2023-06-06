@@ -112,8 +112,7 @@ public class GCCRDTItem extends CRDTItem {
         return super.isDeleted()
                 // left is other level or non deleted item
                 && (this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted());
-                // right is on same level
-                // && (this.right != null && this.level == ((GCCRDTItem) this.right).level);
+                // right can be not deleted / gc / right delimiter / left delimiter on other level
     }
 
     public boolean isRightDeleteGroupDelimiter() {
