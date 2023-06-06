@@ -170,16 +170,14 @@ public class GCCRDT extends CRDT {
         for (int i = 0; i < stableDelimiters.size(); i += 2) {
             GCCRDTItem leftDelimiter = stableDelimiters.get(i);
             GCCRDTItem rightdelimiter = stableDelimiters.get(i + 1);
-            boolean includeGCRight = stableDeleteGroup.get(i / 2).includeRight;
             // delimiter, level base, conflicted item origin, must set gc to false
             leftDelimiter.setGc(false);
-            if (!includeGCRight)
-                rightdelimiter.setGc(false);
+            rightdelimiter.setGc(false);
 
             GCCRDTItem o = (GCCRDTItem) leftDelimiter.right;
 
             unremovable.add(leftDelimiter);
-            while (o != rightdelimiter || includeGCRight) {
+            while (o != rightdelimiter) {
                 // cannot remove level base, and conflicting reference item, only removing when
                 // item is stable in every replica
                 if (!o.getLevelBase() && o.getLeftRefrencer() < 2 && o.getRightRefrencer() < 2) {
@@ -198,8 +196,7 @@ public class GCCRDT extends CRDT {
 
                 o = (GCCRDTItem) o.right;
             }
-            if (!includeGCRight)
-                unremovable.add(rightdelimiter);
+            unremovable.add(rightdelimiter);
         }
 
         // change gc delete group item origin

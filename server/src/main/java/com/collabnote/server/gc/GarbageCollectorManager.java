@@ -35,41 +35,32 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
                     boolean isInsideDeleteGroup = false,
                             includeDeleteGroup = false;
-                    GCCRDTItem leftDelimiter = null,
-                            rightDelimiter = null;
-                    while (true) {
+                    GCCRDTItem leftDelimiter = null;
+                    while (ops != null) {
                         // group checking
-                        if (isInsideDeleteGroup)
-                            if (ops != null && ops.isGarbageCollectable()) {
-                                // set selected delete group operations to gc
+                        if (isInsideDeleteGroup && !ops.isDeleteGroupDelimiter()) {
+                            if (ops.isGarbageCollectable()) {
                                 includeDeleteGroup = true;
                                 ops.setServerGc(true);
-                                rightDelimiter = ops;
-                            } else if (includeDeleteGroup) { // right delimiter decision
-                                boolean includeGcRight = true;
-                                if (!(includeGcRight = !(ops != null && !ops.isDeleteGroupDelimiter())))
-                                    // right is delimiter
-                                    rightDelimiter = ops;
+                            } else if (ops.isRightDeleteGroupDelimiter()) {
+                                if (includeDeleteGroup) {
+                                    leftDelimiter.setServerGc(true);
+                                    ops.setServerGc(true);
 
-                                leftDelimiter.setServerGc(true);
-                                rightDelimiter.setServerGc(true);
+                                    // debug
+                                    System.out.print(leftDelimiter.content + " " + ops.content + ", ");
 
-                                System.out.print(leftDelimiter.content + " " + rightDelimiter.content + ", ");
+                                    deleteGroupSerialize.add(new DeleteGroupSerializable(leftDelimiter.serialize(),
+                                            ops.serialize(), null));
 
-                                deleteGroupSerialize.add(new DeleteGroupSerializable(leftDelimiter.serialize(),
-                                        rightDelimiter.serialize(), includeGcRight, null));
-
-                                isInsideDeleteGroup = includeDeleteGroup = false;
-                                leftDelimiter = rightDelimiter = null;
-                            } else { // only delimiter
-                                isInsideDeleteGroup = false;
-                                leftDelimiter = null;
+                                    isInsideDeleteGroup = includeDeleteGroup = false;
+                                    leftDelimiter = null;
+                                } else {
+                                    isInsideDeleteGroup = false;
+                                    leftDelimiter = null;
+                                }
                             }
-
-                        if (ops == null)
-                            break;
-
-                        if (!isInsideDeleteGroup && ops.isDeleteGroupDelimiter()) { // left delimiter
+                        } else if (ops.isDeleteGroupDelimiter()) {
                             isInsideDeleteGroup = true;
                             leftDelimiter = ops;
                         }
@@ -140,10 +131,10 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
             GCCRDTItem r = conflictGC.get(conflictGC.size() - 1);
             // only scan if its not right delimiter
-            if (r.isGarbageCollectable())
+            if (!r.isRightDeleteGroupDelimiter())
                 while (r.right != null && ((GCCRDTItem) r.right).getServerGc()) {
                     conflictGC.add((GCCRDTItem) r.right);
-                    if (!((GCCRDTItem) r.right).isGarbageCollectable()) {
+                    if (((GCCRDTItem) r.right).isRightDeleteGroupDelimiter()) {
                         break;
                     }
                     r = (GCCRDTItem) r.right;
@@ -158,27 +149,23 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         for (GCCRDTItem i : conflictGC) {
             i.setServerGc(false);
 
-            if (isInsideDeleteGroup)
+            if (isInsideDeleteGroup && !i.isDeleteGroupDelimiter()) {
                 if (i.isGarbageCollectable()) { // gc items
                     gcItems.add(i.serialize());
-                } else { // right delimiter
-                    if (!i.isDeleteGroupDelimiter())
-                        gcItems.add(i.serialize());
-                    deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, false, gcItems));
+                } else if (i.isRightDeleteGroupDelimiter()) {// right delimiter
+                    gcItems.add(i.serialize());
+                    deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, gcItems));
                     isInsideDeleteGroup = false;
                 }
-
-            if (!isInsideDeleteGroup && i.isDeleteGroupDelimiter()) { // left delimiter
+            } else if (i.isDeleteGroupDelimiter()) { // left delimiter
                 gcItems = new ArrayList<>();
                 gcItems.add(i.serialize());
                 isInsideDeleteGroup = true;
             }
         }
-        // if last item is still inside group, add
-        if (isInsideDeleteGroup)
-            deleteGroupSerialize.add(new DeleteGroupSerializable(null, null, false, gcItems));
 
         return deleteGroupSerialize;
+
     }
 
     @Override

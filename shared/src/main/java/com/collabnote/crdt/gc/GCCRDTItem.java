@@ -101,12 +101,26 @@ public class GCCRDTItem extends CRDTItem {
     }
 
     public boolean isGarbageCollectable() {
-        return super.isDeleted() && !isDeleteGroupDelimiter();
+        return super.isDeleted()
+                // left is on same level and deleted (gc or delimiter)
+                && !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted())
+                // right is on same level
+                && (this.right != null && this.level == ((GCCRDTItem) this.right).level);
     }
 
     public boolean isDeleteGroupDelimiter() {
         return super.isDeleted()
-                && (this.left == null || !this.left.isDeleted() || this.level != ((GCCRDTItem) this.left).level);
+                // left is other level or non deleted item
+                && (this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted());
+                // right is on same level
+                // && (this.right != null && this.level == ((GCCRDTItem) this.right).level);
+    }
+
+    public boolean isRightDeleteGroupDelimiter() {
+        // left is on same level and deleted (gc or delimiter)
+        return !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted())
+                // if this item is deleted, then the right must other level
+                && (!isDeleted() || this.right == null || this.level != ((GCCRDTItem) this.right).level);
     }
 
     // remove entire delete group in a level and merge top level delete group
@@ -158,7 +172,9 @@ public class GCCRDTItem extends CRDTItem {
                 + "\nlb: " + (this.getLevelBase() ? "t" : "f")
                 + "\nc: " + (this.getLeftRefrencer() == 2 ? "l" : "")
                 + "-" + (this.getRightRefrencer() == 2 ? "r" : "")));
-        if (this.isGarbageCollectable())
+        if (this.isRightDeleteGroupDelimiter())
+            node = node.with(Color.ORANGE);
+        else if (this.isGarbageCollectable())
             node = node.with(Color.RED);
         else if (this.isDeleteGroupDelimiter())
             node = node.with(Color.BLUE);
