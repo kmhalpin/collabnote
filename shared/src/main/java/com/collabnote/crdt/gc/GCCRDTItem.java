@@ -105,7 +105,7 @@ public class GCCRDTItem extends CRDTItem {
                 // left is on same level and deleted (gc or delimiter)
                 && !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted())
                 // right is on same level
-                && (this.right != null && this.level == ((GCCRDTItem) this.right).level);
+                && !(this.right == null || this.level != ((GCCRDTItem) this.right).level);
     }
 
     public boolean isDeleteGroupDelimiter() {
@@ -123,6 +123,8 @@ public class GCCRDTItem extends CRDTItem {
     }
 
     // remove entire delete group in a level and merge top level delete group
+    // NOTE: merge can be do if left base is deleted, (right base can be deleted or not)
+    // ALT: if the whole under level is deleted we can merge by changing all under status into gc and change to upper level
     public void mergeLevelDeleteGroup() {
         if (!this.isDeleteGroupDelimiter()) {
             return;
