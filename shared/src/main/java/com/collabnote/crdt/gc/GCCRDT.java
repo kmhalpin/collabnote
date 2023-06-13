@@ -311,7 +311,7 @@ public class GCCRDT extends CRDT {
 
                 // recover delete group
                 if (recoveredItem.isGarbageCollectable())
-                    recoveredItem.setDeleted();
+                    this.setDeleted(recoveredItem);
             }
             latestCounter += deleteGroup.gcItems.size() - 1;
         }

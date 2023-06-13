@@ -178,7 +178,7 @@ public class CRDT {
             while (length > 0 && p.right != null) {
                 if (!p.right.isDeleted()) {
                     length -= 1;
-                    p.right.setDeleted();
+                    this.setDeleted(p.right);
                     deleted.add(p.right);
                 }
                 p.forward();
@@ -263,7 +263,7 @@ public class CRDT {
                 public Pair<Integer, CRDTItem> execute() {
                     try {
                         lock.lock();
-                        item.setDeleted();
+                        setDeleted(item);
                         int index = findIndex(item);
                         return new Pair<Integer, CRDTItem>(index, item);
                     } catch (Exception e) {
@@ -276,6 +276,10 @@ public class CRDT {
 
             });
         }
+    }
+
+    public void setDeleted(CRDTItem item) {
+        item.setDeleted();
     }
 
     public void remoteInsert(CRDTItem item, boolean newItem) {
