@@ -26,7 +26,7 @@ public class MarkerManager {
 
         // iterate right if possible
         while (p.right != null && pidx <= index) {
-            if (!p.isDeleted()) {
+            if (!p.isDeleted) {
                 if (index < pidx + 1) {
                     break;
                 }
@@ -38,7 +38,7 @@ public class MarkerManager {
         // iterate left if necessary
         while (p.left != null && pidx >= index) {
             p = p.left;
-            if (!p.isDeleted()) {
+            if (!p.isDeleted) {
                 pidx -= 1;
             }
         }
@@ -61,9 +61,9 @@ public class MarkerManager {
 
         CRDTItem i = marker.item;
         // adjust position to not pointing deleted item
-        while (i != null && (i.isDeleted())) {
+        while (i != null && (i.isDeleted)) {
             i = i.left;
-            if (i != null && !i.isDeleted()) {
+            if (i != null && !i.isDeleted) {
                 index -= 1;
                 // since i is not deleted loop will break
             }

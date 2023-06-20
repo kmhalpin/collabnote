@@ -61,6 +61,20 @@ public class DocumentEntity {
         return operationBuffer;
     }
 
+    public void addOperationBuffer(CRDTItemSerializable item) {
+        this.operationBuffer.add(item);
+    }
+
+    public void ackOperationBuffer(CRDTItemSerializable item) {
+        for (int i = 0; i < this.operationBuffer.size(); i++) {
+            if (this.operationBuffer.get(i).id
+                    .equals(item.id)) {
+                this.operationBuffer.remove(i);
+                return;
+            }
+        }
+    }
+
     public String getServerHost() {
         return serverHost;
     }

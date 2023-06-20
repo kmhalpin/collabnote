@@ -5,7 +5,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.collabnote.crdt.CRDT;
+import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.crdt.CRDTItem;
 
 import guru.nidi.graphviz.attribute.Color;
@@ -25,13 +25,13 @@ public class StateVisual implements Closeable {
         Graphviz.useEngine(new GraphvizCmdLineEngine());
     }
 
-    CRDT crdt;
+    DocumentEntity entity;
     Thread visualizerThread;
     boolean closed = false;
     boolean render = true;
 
-    public StateVisual(CRDT crdt, StateVisualListener listener) {
-        this.crdt = crdt;
+    public StateVisual(DocumentEntity entity, StateVisualListener listener) {
+        this.entity = entity;
         this.visualizerThread = new Thread(new Runnable() {
 
             @Override
@@ -66,7 +66,7 @@ public class StateVisual implements Closeable {
 
         Node nullStart = node("null start"), nullEnd = node("null end");
 
-        CRDTItem o = this.crdt.getStart();
+        CRDTItem o = this.entity.getCrdtReplica().getStart();
         while (o != null) {
             pureNodeList.add(o.renderNode().link(
                     to(o.getOriginLeft() != null ? o.getOriginLeft().renderNode() : nullStart).with(Style.BOLD,

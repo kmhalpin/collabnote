@@ -2,7 +2,6 @@ package com.collabnote.crdt;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
@@ -90,7 +89,7 @@ public class CRDT {
         // iterate right if possible
         CRDTItem temp = null;
         for (temp = p; item != temp && temp != null;) {
-            if (!temp.isDeleted() || temp == item) {
+            if (!temp.isDeleted || temp == item) {
                 offset += 1;
             }
             temp = temp.right;
@@ -100,7 +99,7 @@ public class CRDT {
         if (temp == null) {
             offset = 0;
             for (temp = p; item != temp && temp != null;) {
-                if (!temp.isDeleted() || temp == item) {
+                if (!temp.isDeleted || temp == item) {
                     offset -= 1;
                 }
                 temp = temp.left;
@@ -128,7 +127,7 @@ public class CRDT {
 
     Position findNextPosition(Position pos, int count) {
         while (pos.right != null && count > 0) {
-            if (!pos.right.isDeleted()) {
+            if (!pos.right.isDeleted) {
                 pos.index += 1;
                 count -= 1;
             }
@@ -176,7 +175,7 @@ public class CRDT {
             int startLen = length;
 
             while (length > 0 && p.right != null) {
-                if (!p.right.isDeleted()) {
+                if (!p.right.isDeleted) {
                     length -= 1;
                     this.setDeleted(p.right);
                     deleted.add(p.right);
@@ -256,7 +255,7 @@ public class CRDT {
     }
 
     protected void delete(CRDTItem item) {
-        if (!item.isDeleted()) {
+        if (!item.isDeleted) {
             this.remoteTransaction.onRemoteCRDTDelete(new Transaction(item) {
 
                 @Override
@@ -279,7 +278,7 @@ public class CRDT {
     }
 
     public void setDeleted(CRDTItem item) {
-        item.setDeleted();
+        item.isDeleted = true;
     }
 
     public void remoteInsert(CRDTItem item, boolean newItem) {
@@ -292,7 +291,7 @@ public class CRDT {
                     integrate(item);
                     if (newItem)
                         versionVector.put(item);
-                    return new Pair<Integer, CRDTItem>(newItem && !item.isDeleted() ? findIndex(item) : -1, item);
+                    return new Pair<Integer, CRDTItem>(newItem && !item.isDeleted ? findIndex(item) : -1, item);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -365,16 +364,6 @@ public class CRDT {
         if (item.right != null) {
             item.right.left = item;
         }
-    }
-
-    public List<CRDTItem> getItems() {
-        List<CRDTItem> list = new ArrayList<>();
-        CRDTItem i = start;
-        while (i != null) {
-            list.add(i);
-            i = i.right;
-        }
-        return list;
     }
 
     // follow this alg:

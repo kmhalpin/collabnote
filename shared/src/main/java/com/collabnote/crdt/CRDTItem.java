@@ -10,7 +10,7 @@ public class CRDTItem {
     public CRDTID id;
     private CRDTItem originLeft;
     private CRDTItem originRight;
-    private boolean isDeleted;
+    public boolean isDeleted;
     public CRDTItem left;
     public CRDTItem right;
 
@@ -32,20 +32,8 @@ public class CRDTItem {
                 this.originRight == null ? null : this.originRight.id, isDeleted, false);
     }
 
-    public boolean isDeleted() {
-        return isDeleted;
-    }
-
-    public void setDeleted() {
-        this.isDeleted = true;
-    }
-
     public CRDTItem getOriginLeft() {
         return originLeft;
-    }
-
-    public void removeOriginLeft() {
-        this.originLeft = null;
     }
 
     public void setOrigin(CRDTItem originLeft, CRDTItem originRight) {
@@ -55,10 +43,6 @@ public class CRDTItem {
 
     public CRDTItem getOriginRight() {
         return originRight;
-    }
-
-    public void removeOriginRight() {
-        this.originRight = null;
     }
 
     public void changeOriginLeft(CRDTItem originLeft) {

@@ -31,7 +31,7 @@ public class InsertDeleteBenchmark {
 
         @Override
         public void doSetup() {
-            this.app.shareNote("127.0.0.1");
+            this.app.getViewModel().shareDocument("127.0.0.1");
             this.rawData = RandomStringUtils.randomAscii(dataN);
             String[] dataArray = this.rawData.split("");
 
@@ -67,9 +67,9 @@ public class InsertDeleteBenchmark {
     public void insertDeleteCharacters(InsertDeleteState state) throws BadLocationException {
         InputData data = state.data.get(state.i);
         if (data.isRemove) {
-            state.app.getCRDT().localDelete(0, 1);
+            state.app.getViewModel().getCurrentReplica().localDelete(0, 1);
         } else {
-            state.app.getCRDT().localInsert(0, data.character);
+            state.app.getViewModel().getCurrentReplica().localInsert(0, data.character);
         }
         state.i += 1;
     }

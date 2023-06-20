@@ -101,25 +101,25 @@ public class GCCRDTItem extends CRDTItem {
     }
 
     public boolean isGarbageCollectable() {
-        return super.isDeleted()
+        return super.isDeleted
                 // left is on same level and deleted (gc or delimiter)
-                && !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted())
+                && !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted)
                 // right is on same level
                 && !(this.right == null || this.level != ((GCCRDTItem) this.right).level);
     }
 
     public boolean isDeleteGroupDelimiter() {
-        return super.isDeleted()
+        return super.isDeleted
                 // left is other level or non deleted item
-                && (this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted());
+                && (this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted);
                 // right can be not deleted / gc / right delimiter / left delimiter on other level
     }
 
     public boolean isRightDeleteGroupDelimiter() {
         // left is on same level and deleted (gc or delimiter)
-        return !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted())
+        return !(this.left == null || this.level != ((GCCRDTItem) this.left).level || !this.left.isDeleted)
                 // if this item is deleted, then the right must other level
-                && (!isDeleted() || this.right == null || this.level != ((GCCRDTItem) this.right).level);
+                && (!isDeleted || this.right == null || this.level != ((GCCRDTItem) this.right).level);
     }
 
     // remove entire delete group in a level and merge top level delete group
@@ -154,7 +154,7 @@ public class GCCRDTItem extends CRDTItem {
         return new CRDTItemSerializable(this.content, this.id,
                 this.getOriginLeft() != null ? this.getOriginLeft().id : null,
                 this.getOriginRight() != null ? this.getOriginRight().id : null,
-                this.isDeleted(),
+                this.isDeleted,
                 this.getGc());
     }
 

@@ -6,6 +6,7 @@ plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
     id "me.champeau.jmh"
+    id "org.dripto.gradle.plugin.plantuml.plantuml-generator"
 }
 
 repositories {
@@ -34,4 +35,11 @@ jar {
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+}
+
+tasks.withType(org.dripto.gradle.plugin.plantuml.task.PlantUmlGeneratorTask) { 
+    doFirst{
+        properties.config.whitelistRegexp = "com.collabnote.*"
+    }
+    destination="${buildDir}/reports/class-diagram.txt"
 }

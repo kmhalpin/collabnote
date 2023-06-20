@@ -17,7 +17,7 @@ public class Position {
         if (this.right == null) {
             throw new NoSuchElementException("null");
         }
-        if (!this.right.isDeleted()) {
+        if (!this.right.isDeleted) {
             this.index += 1;
         }
         this.left = this.right;

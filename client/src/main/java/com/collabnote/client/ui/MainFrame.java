@@ -29,25 +29,31 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private TextEditorViewModel viewModel;
+
     private GroupLayout gLayout;
     private JLayeredPane layeredPane;
     private EditorPanel editorPanel;
     private StateVisual stateVisual;
     private JScrollPane stateVisualContainer;
 
+    public TextEditorViewModel getViewModel() {
+        return this.viewModel;
+    }
+
     public MainFrame() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         CRDTDocument document = new CRDTDocument();
-        TextEditorViewModel viewModel = new TextEditorViewModel(document);
+        this.viewModel = new TextEditorViewModel(document);
 
-        Menu menu = new Menu(viewModel);
+        Menu menu = new Menu(this.viewModel);
         setJMenuBar(menu);
 
         stateVisual = new StateVisual();
         stateVisualContainer = new JScrollPane(stateVisual);
         stateVisualContainer.setVisible(false);
-        viewModel.setImageListener(new TextEditorViewModelImageListener() {
+        this.viewModel.setImageListener(new TextEditorViewModelImageListener() {
             @Override
             public void updateImage(byte[] image) {
                 stateVisualContainer.setVisible(image != null);
@@ -55,7 +61,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        editorPanel = new EditorPanel(viewModel, document);
+        editorPanel = new EditorPanel(this.viewModel, document);
 
         layeredPane = new JLayeredPane();
         layeredPane.add(stateVisualContainer, JLayeredPane.PALETTE_LAYER);

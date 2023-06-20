@@ -8,15 +8,19 @@ import javax.swing.text.SimpleAttributeSet;
 
 import org.apache.commons.math3.util.Pair;
 
-import com.collabnote.crdt.CRDT;
+import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTRemoteTransaction;
 import com.collabnote.crdt.Transaction;
 
 public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteTransaction {
-    private CRDT crdt;
+    private DocumentEntity entity;
 
-    public void bindCrdt(CRDT crdt) {
+    public DocumentEntity getEntity() {
+        return entity;
+    }
+
+    public void bindCrdt(DocumentEntity entity) {
         try {
             this.writeLock();
 
@@ -29,7 +33,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
 
             this.fireRemoveUpdate(e);
 
-            this.crdt = crdt;
+            this.entity = entity;
         } catch (BadLocationException e) {
             e.printStackTrace();
         } finally {
@@ -53,7 +57,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
             this.writeLock();
 
             Pair<Integer, CRDTItem> result = transaction.execute();
-            if (result == null || result.getSecond().isDeleted()) {
+            if (result == null || result.getSecond().isDeleted) {
                 return;
             }
 
@@ -115,7 +119,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
             changes = "";
         }
 
-        crdt.localInsert(offset, changes);
+        entity.getCrdtReplica().localInsert(offset, changes);
     }
 
     @Override
@@ -126,7 +130,7 @@ public class CRDTDocument extends PlainDocument implements DocumentListener, CRD
 
         int offset = e.getOffset();
 
-        crdt.localDelete(offset, e.getLength());
+        entity.getCrdtReplica().localDelete(offset, e.getLength());
     }
 
     @Override

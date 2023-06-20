@@ -40,8 +40,6 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     private TextEditorViewModelCollaborationListener collaborationListener;
     private TextEditorViewModelImageListener imageListener;
 
-    private DocumentEntity documentEntity;
-
     private StateVisual stateVisual;
 
     public TextEditorViewModel(CRDTDocument document) {
@@ -49,6 +47,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         this.documentModel = new DocumentModel();
         this.document = document;
         this.initDocument();
+    }
+
+    public CRDT getCurrentReplica() {
+        return document.getEntity().getCrdtReplica();
     }
 
     // set listeners
@@ -70,10 +72,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             return;
         }
 
-        if (this.documentEntity == null || this.imageListener == null)
+        if (this.document.getEntity() == null || this.imageListener == null)
             return;
 
-        this.stateVisual = new StateVisual(this.documentEntity.getCrdtReplica(), new StateVisualListener() {
+        this.stateVisual = new StateVisual(this.document.getEntity(), new StateVisualListener() {
 
             @Override
             public void updateImage(byte[] image) {
@@ -101,11 +103,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         if (this.collaborationRepository.isConnected())
             this.collaborationRepository.closeConnection();
 
-        this.documentEntity = new DocumentEntity(createCRDTReplica());
         this.userCarets = new HashMap<>();
 
-        this.document.bindCrdt(this.documentEntity.getCrdtReplica());
-        return this.documentEntity;
+        this.document.bindCrdt(new DocumentEntity(createCRDTReplica()));
+        return this.document.getEntity();
     }
 
     public CRDT createCRDTReplica() {
@@ -116,11 +117,11 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     // save load
     public void saveDocument(File targetFile) {
-        if (this.documentEntity == null) {
+        if (this.document.getEntity() == null) {
             return;
         }
 
-        this.documentModel.saveFile(this.documentEntity, targetFile);
+        this.documentModel.saveFile(this.document.getEntity(), targetFile);
     }
 
     public void loadDocument(File targetFile) {
@@ -134,30 +135,30 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     // offline online toggle
     public void toggleConnection() {
-        if (this.documentEntity == null) {
+        if (this.document.getEntity() == null) {
             return;
         }
 
-        if (this.documentEntity.isCollaborating()) {
+        if (this.document.getEntity().isCollaborating()) {
             if (this.collaborationRepository.isConnected()) {
                 this.collaborationRepository.closeConnection();
             } else {
-                this.collaborationRepository.connectCRDT(this.documentEntity.getOperationBuffer(),
-                        this.documentEntity.getServerHost(),
-                        this.documentEntity.getShareID(), this.agent, this);
+                this.collaborationRepository.connectCRDT(this.document.getEntity().getOperationBuffer(),
+                        this.document.getEntity().getServerHost(),
+                        this.document.getEntity().getShareID(), this.agent, this);
             }
         }
     }
 
     // collaboration
     public void shareDocument(String host) {
-        if (this.documentEntity == null) {
+        if (this.document.getEntity() == null) {
             return;
         }
 
-        this.documentEntity.setCollaboration(null, host, new ArrayList<>());
+        this.document.getEntity().setCollaboration(null, host, new ArrayList<>());
 
-        collaborationRepository.shareCRDT(this.documentEntity.getCrdtReplica(), host, this.agent, this);
+        collaborationRepository.shareCRDT(this.document.getEntity().getCrdtReplica(), host, this.agent, this);
     }
 
     public void connectDocument(String host, String shareID) {
@@ -169,10 +170,10 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     }
 
     public void updateCaret(int index) {
-        if (!this.documentEntity.isCollaborating())
+        if (!this.document.getEntity().isCollaborating())
             return;
 
-        this.collaborationRepository.sendCaret(this.documentEntity.getShareID(), index);
+        this.collaborationRepository.sendCaret(this.document.getEntity().getShareID(), index);
     }
 
     // local CRDT update listener
@@ -181,14 +182,14 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         if (this.stateVisual != null)
             this.stateVisual.triggerRender();
 
-        if (!this.documentEntity.isCollaborating())
+        if (!this.document.getEntity().isCollaborating())
             return;
 
         CRDTItemSerializable serializedItem = item.serialize();
 
-        this.documentEntity.getOperationBuffer().add(serializedItem);
+        this.document.getEntity().getOperationBuffer().add(serializedItem);
         // might try to send in network thread by the queue
-        this.collaborationRepository.sendInsert(this.documentEntity.getShareID(), serializedItem);
+        this.collaborationRepository.sendInsert(this.document.getEntity().getShareID(), serializedItem);
     }
 
     @Override
@@ -196,14 +197,14 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         if (this.stateVisual != null)
             this.stateVisual.triggerRender();
 
-        if (!this.documentEntity.isCollaborating())
+        if (!this.document.getEntity().isCollaborating())
             return;
 
         for (CRDTItem i : item) {
             CRDTItemSerializable serializedItem = i.serialize();
 
-            this.documentEntity.getOperationBuffer().add(serializedItem);
-            this.collaborationRepository.sendDelete(this.documentEntity.getShareID(), serializedItem);
+            this.document.getEntity().getOperationBuffer().add(serializedItem);
+            this.collaborationRepository.sendDelete(this.document.getEntity().getShareID(), serializedItem);
         }
     }
 
@@ -239,41 +240,42 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 }
                 break;
             case DELETE:
-                this.documentEntity.getCrdtReplica().tryRemoteDelete(data.getCrdtItem());
+                this.document.getEntity().getCrdtReplica().tryRemoteDelete(data.getCrdtItem());
                 break;
             case INSERT:
-                this.documentEntity.getCrdtReplica().tryRemoteInsert(data.getCrdtItem());
+                this.document.getEntity().getCrdtReplica().tryRemoteInsert(data.getCrdtItem());
                 break;
             // acknowledge sent
             case DONE:
-                for (int i = 0; i < this.documentEntity.getOperationBuffer().size(); i++) {
-                    if (this.documentEntity.getOperationBuffer().get(i).id
+                for (int i = 0; i < this.document.getEntity().getOperationBuffer().size(); i++) {
+                    if (this.document.getEntity().getOperationBuffer().get(i).id
                             .equals(data.getCrdtItem().id)) {
-                        this.documentEntity.getOperationBuffer().remove(i);
+                        this.document.getEntity().getOperationBuffer().remove(i);
                     }
                 }
                 break;
             // after connected
             case CONNECT:
-                this.documentEntity.setShareID(data.getShareID());
+                this.document.getEntity().setShareID(data.getShareID());
                 this.collaborationListener.collaborationStatusListener(true);
                 break;
             // server going to share to client
             case SHARE:
                 // empty replica
-                this.documentEntity.setCrdtReplica(createCRDTReplica());
-                this.document.bindCrdt(this.documentEntity.getCrdtReplica());
+                this.document.getEntity().setCrdtReplica(createCRDTReplica());
+                this.document.bindCrdt(this.document.getEntity());
                 break;
             // gc crdt protocol
             case GC:
-                List<DeleteGroupSerializable> success = ((GCCRDT) this.documentEntity.getCrdtReplica())
+                List<DeleteGroupSerializable> success = ((GCCRDT) this.document.getEntity().getCrdtReplica())
                         .GC(data.getDeleteGroupList());
                 if (success.size() > 0) {
-                    this.collaborationRepository.sendGCAck(this.documentEntity.getShareID(), success);
+                    this.collaborationRepository.sendGCAck(this.document.getEntity().getShareID(), success);
                 }
                 break;
             case RECOVER:
-                ((GCCRDT) this.documentEntity.getCrdtReplica()).recover(data.getDeleteGroupList(), data.getCrdtItem());
+                ((GCCRDT) this.document.getEntity().getCrdtReplica()).recover(data.getDeleteGroupList(),
+                        data.getCrdtItem());
                 break;
             default:
                 break;

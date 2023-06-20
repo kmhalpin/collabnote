@@ -4,6 +4,7 @@
 package com.collabnote.client;
 
 import com.collabnote.client.ui.MainFrame;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 import java.awt.EventQueue;
 
@@ -19,9 +20,15 @@ public class App {
                     frame.setVisible(visible);
                 }
             });
+        else
+            frame = new MainFrame();
     }
 
     public static void main(String[] args) {
         new App(true);
+    }
+
+    public TextEditorViewModel getViewModel() {
+        return this.frame.getViewModel();
     }
 }

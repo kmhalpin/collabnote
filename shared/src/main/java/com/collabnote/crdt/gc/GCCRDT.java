@@ -12,16 +12,8 @@ import com.collabnote.crdt.CRDTLocalListener;
 import com.collabnote.crdt.CRDTRemoteTransaction;
 
 public class GCCRDT extends CRDT {
-    protected boolean clientReplica;
-
-    public GCCRDT(int agent, CRDTRemoteTransaction remotelistener, CRDTLocalListener localListener,
-            boolean clientReplica) {
-        super(agent, remotelistener, localListener);
-        this.clientReplica = clientReplica;
-    }
-
     public GCCRDT(int agent, CRDTRemoteTransaction remotelistener, CRDTLocalListener localListener) {
-        this(agent, remotelistener, localListener, true);
+        super(agent, remotelistener, localListener);
     }
 
     @Override
@@ -56,57 +48,6 @@ public class GCCRDT extends CRDT {
         return this.bindItem(item, bitem);
     }
 
-    // find index with optimized search, skips deleted group
-    @Override
-    protected int findIndex(CRDTItem item) {
-        return super.findIndex(item);
-        // if (!this.clientReplica || this.start == item || this.start == null) {
-        // return 0;
-        // }
-
-        // Marker marker = markerManager.marker;
-
-        // CRDTItem p = marker != null ? marker.item : start;
-        // int offset = 0;
-
-        // // iterate right if possible
-        // CRDTItem temp = null;
-        // for (temp = p; item != temp && temp != null;) {
-        // if (!temp.isDeleted() || temp == item) {
-        // offset += 1;
-        // } else if (temp.isDeleted()) {
-        // // skips deleted group
-        // temp = ((GCCRDTItem) temp).rightDeleteGroup;
-        // }
-        // temp = temp.right;
-        // }
-
-        // // iterate left if right empty
-        // if (temp == null) {
-        // offset = 0;
-        // for (temp = p; item != temp && temp != null;) {
-        // if (!temp.isDeleted() || temp == item) {
-        // offset -= 1;
-        // } else if (temp.isDeleted()) {
-        // temp = ((GCCRDTItem) temp).leftDeleteGroup;
-        // }
-        // temp = temp.left;
-        // }
-
-        // if (temp == null) {
-        // throw new NoSuchElementException("item gone");
-        // }
-
-        // if (marker != null) {
-        // markerManager.updateMarker(marker.index + offset, item.isDeleted() ? -1 : 1);
-        // return item.isDeleted() ? marker.index + offset + 1 : marker.index + offset -
-        // 1;
-        // }
-        // }
-
-        // return marker != null ? marker.index + offset : offset;
-    }
-
     @Override
     protected void integrate(CRDTItem item) {
         if (((GCCRDTItem) item).getServerGc()) {
@@ -137,7 +78,7 @@ public class GCCRDT extends CRDT {
             GCCRDTItem rightDelimiter;
             try {
                 leftDelimiter = (GCCRDTItem) versionVector.find(i.leftDeleteGroup.id);
-                if (!leftDelimiter.isDeleted())
+                if (!leftDelimiter.isDeleted)
                     delete(leftDelimiter);
 
                 rightDelimiter = (GCCRDTItem) versionVector.find(i.rightDeleteGroup.id);
@@ -319,33 +260,8 @@ public class GCCRDT extends CRDT {
         for (GCCRDTItem i : recoveredItems)
             i.setGc(false);
 
-        // concurrently split gc item to optimize soon
-
         // insert item
         for (CRDTItemSerializable i : newItems)
             tryRemoteInsert(i);
     }
-
-    @Override
-    public List<CRDTItem> getItems() {
-        List<CRDTItem> list = new ArrayList<>();
-        GCCRDTItem i = (GCCRDTItem) start;
-        while (i != null) {
-            // TODO: remove print
-            System.out.print("{ "
-                    + (i.getOriginLeft() != null ? (i.getOriginLeft().id.agent + "-" + i.getOriginLeft().id.seq) : null)
-                    + ", " + i.content + ", "
-                    + (i.isDeleteGroupDelimiter() ? "DG" : null) + ", "
-                    + (i.isDeleted() ? "DELETED" : null) + ", " + i.level
-                    + ", "
-                    + (i.getOriginRight() != null ? (i.getOriginRight().id.agent + "-" + i.getOriginRight().id.seq)
-                            : null)
-                    + " }");
-            list.add(i);
-            i = (GCCRDTItem) i.right;
-        }
-        System.out.println();
-        return list;
-    }
-
 }

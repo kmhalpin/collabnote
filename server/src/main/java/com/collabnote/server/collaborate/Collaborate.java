@@ -13,7 +13,7 @@ public class Collaborate {
     public String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
-    private GCCRDT docMaster;
+    private GCCRDT gccrdt;
     private GarbageCollectorManager gcManager;
 
     public Collaborate(String shareID) {
@@ -21,8 +21,8 @@ public class Collaborate {
         this.isReady = false;
         this.clients = new ArrayList<>();
         this.gcManager = new GarbageCollectorManager(this);
-        this.docMaster = new GCCRDT(-1, gcManager, null, false);
-        this.gcManager.setCrdt(docMaster);
+        this.gccrdt = new GCCRDT(-1, gcManager, null);
+        this.gcManager.setCrdt(gccrdt);
     }
 
     public void broadcast(DataPayload data) {
@@ -36,15 +36,15 @@ public class Collaborate {
     }
 
     public void delete(CRDTItemSerializable item) {
-        this.docMaster.tryRemoteDelete(item);
+        this.gccrdt.tryRemoteDelete(item);
     }
 
     public void insert(CRDTItemSerializable item) {
-        this.docMaster.tryRemoteInsert(item);
+        this.gccrdt.tryRemoteInsert(item);
     }
 
     public List<CRDTItemSerializable> getVersionVector() {
-        return this.docMaster.getVersionVector().serialize();
+        return this.gccrdt.getVersionVector().serialize();
     }
 
     // @Override

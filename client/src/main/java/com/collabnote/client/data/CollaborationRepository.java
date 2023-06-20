@@ -7,7 +7,6 @@ import java.util.List;
 import com.collabnote.client.socket.ClientSocket;
 import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.crdt.CRDT;
-import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.crdt.gc.DeleteGroupSerializable;
 import com.collabnote.socket.DataPayload;
@@ -146,8 +145,8 @@ public class CollaborationRepository {
                     isReady = true;
 
                     // upload crdt
-                    for (CRDTItem crdtItem : crdt.getItems()) {
-                        socket.sendData(DataPayload.insertPayload(data.getShareID(), crdtItem.serialize()));
+                    for (CRDTItemSerializable crdtItem : crdt.getVersionVector().serialize()) {
+                        socket.sendData(DataPayload.insertPayload(data.getShareID(), crdtItem));
                     }
                     socket.sendData(new DataPayload(Type.SHARE, data.getShareID(), null, 0, null));
                 }

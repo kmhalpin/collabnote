@@ -24,7 +24,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
 
         fileMenu = new JMenu("File");
         editMenu = new JMenu("Edit");
-        accountMenu = new JMenu("Account");
+        accountMenu = new JMenu("Debug");
 
         fileNewItem = new JMenuItem("New File");
         fileNewItem.addActionListener(new ActionListener() {
