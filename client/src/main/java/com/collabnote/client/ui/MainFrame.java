@@ -41,11 +41,10 @@ public class MainFrame extends JFrame {
         return this.viewModel;
     }
 
-    public MainFrame() {
+    public MainFrame(TextEditorViewModel viewModel, CRDTDocument document) {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        CRDTDocument document = new CRDTDocument();
-        this.viewModel = new TextEditorViewModel(document);
+        this.viewModel = viewModel;
 
         Menu menu = new Menu(this.viewModel);
         setJMenuBar(menu);

@@ -37,23 +37,29 @@ public class InsertDeleteBenchmark {
 
             // prepare warmup data
             int inserted = 0;
+            int location = -1;
             for (int i = 0; i < warmUpN; i++) {
                 if (Math.floor(i / 100) % 2 == 0) {
-                    this.data.add(new InputData(i, false, dataArray[inserted]));
+                    location++;
+                    this.data.add(new InputData(location, false, dataArray[inserted]));
                     inserted++;
                 } else {
-                    this.data.add(new InputData(i, true, null));
+                    this.data.add(new InputData(99 - location, true, null));
+                    location--;
                 }
             }
 
             // prepare benchmark data
             inserted = 0;
+            location = -1;
             for (int i = 0; i < N; i++) {
                 if (Math.floor(i / 100) % 2 == 0) {
-                    this.data.add(new InputData(i, false, dataArray[inserted]));
+                    location++;
+                    this.data.add(new InputData(location, false, dataArray[inserted]));
                     inserted++;
                 } else {
-                    this.data.add(new InputData(i, true, null));
+                    this.data.add(new InputData(99 - location, true, null));
+                    location--;
                 }
             }
         }
@@ -67,9 +73,9 @@ public class InsertDeleteBenchmark {
     public void insertDeleteCharacters(InsertDeleteState state) throws BadLocationException {
         InputData data = state.data.get(state.i);
         if (data.isRemove) {
-            state.app.getViewModel().getCurrentReplica().localDelete(0, 1);
+            state.app.getViewModel().getCurrentReplica().localDelete(data.index, 1);
         } else {
-            state.app.getViewModel().getCurrentReplica().localInsert(0, data.character);
+            state.app.getViewModel().getCurrentReplica().localInsert(data.index, data.character);
         }
         state.i += 1;
     }

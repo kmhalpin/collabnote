@@ -19,6 +19,7 @@ import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.crdt.gc.DeleteGroupSerializable;
 import com.collabnote.crdt.gc.GCCRDT;
+import com.collabnote.crdt.time.TCRDT;
 import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItem;
 import com.collabnote.crdt.CRDTItemSerializable;
@@ -257,7 +258,8 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             // after connected
             case CONNECT:
                 this.document.getEntity().setShareID(data.getShareID());
-                this.collaborationListener.collaborationStatusListener(true);
+                if (this.collaborationListener != null)
+                    this.collaborationListener.collaborationStatusListener(true);
                 break;
             // server going to share to client
             case SHARE:
@@ -267,6 +269,8 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 break;
             // gc crdt protocol
             case GC:
+                if (!(this.document.getEntity().getCrdtReplica() instanceof GCCRDT))
+                    break;
                 List<DeleteGroupSerializable> success = ((GCCRDT) this.document.getEntity().getCrdtReplica())
                         .GC(data.getDeleteGroupList());
                 if (success.size() > 0) {
@@ -274,6 +278,8 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 }
                 break;
             case RECOVER:
+                if (!(this.document.getEntity().getCrdtReplica() instanceof GCCRDT))
+                    break;
                 ((GCCRDT) this.document.getEntity().getCrdtReplica()).recover(data.getDeleteGroupList(),
                         data.getCrdtItem());
                 break;

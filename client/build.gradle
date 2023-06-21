@@ -28,9 +28,10 @@ jar {
 jmh {
     includes = ['com\\.collabnote\\.client\\.InsertDeleteBenchmark.*']
     fork = 1
-    profilers = ['gc',
-        'com.collabnote.client.profiler.MemoryUsageProfiler',
-        'com.collabnote.client.profiler.TotalMemoryProfiler']
+    profilers = [//'gc',
+        // 'com.collabnote.client.profiler.MemoryUsageProfiler',
+        'com.collabnote.client.profiler.OperationDelay'
+        /*'com.collabnote.client.profiler.TotalMemoryProfiler'*/]
     failOnError = true
     forceGC = true
     humanOutputFile = project.file("${project.buildDir}/results/jmh/human.txt")

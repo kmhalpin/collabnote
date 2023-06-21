@@ -1,7 +1,5 @@
 package com.collabnote.client;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -159,12 +157,12 @@ public class ClientBenchmark {
 
         @TearDown
         public void doTearDown() {
-            try {
-                OpsResultRender.render(this.app.getViewModel().getCurrentReplica(), new File(
-                        "/Users/kemasmhuseinalviansyah/Documents/Code/Java/collabnote/client/build/results/jmh/render.png"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            // try {
+            //     OpsResultRender.render(this.app.getViewModel().getCurrentReplica(), new File(
+            //             "/Users/kemasmhuseinalviansyah/Documents/Code/Java/collabnote/client/build/results/jmh/render.png"));
+            // } catch (IOException e) {
+            //     e.printStackTrace();
+            // }
         }
 
         public abstract void doSetup();

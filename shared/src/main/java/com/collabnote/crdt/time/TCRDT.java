@@ -48,7 +48,7 @@ public class TCRDT extends CRDT {
                 }
             }
 
-        }, 0, 30, TimeUnit.SECONDS);
+        }, 0, 15, TimeUnit.SECONDS);
     }
 
     @Override

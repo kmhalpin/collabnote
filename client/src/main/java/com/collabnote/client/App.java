@@ -4,24 +4,25 @@
 package com.collabnote.client;
 
 import com.collabnote.client.ui.MainFrame;
+import com.collabnote.client.ui.document.CRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 import java.awt.EventQueue;
 
 public class App {
-    private MainFrame frame;
+    private TextEditorViewModel viewModel;
 
     public App(boolean visible) {
+        CRDTDocument document = new CRDTDocument();
+        this.viewModel = new TextEditorViewModel(document);
         if (visible)
             EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    frame = new MainFrame();
+                    MainFrame frame = new MainFrame(viewModel, document);
                     frame.setVisible(visible);
                 }
             });
-        else
-            frame = new MainFrame();
     }
 
     public static void main(String[] args) {
@@ -29,6 +30,6 @@ public class App {
     }
 
     public TextEditorViewModel getViewModel() {
-        return this.frame.getViewModel();
+        return this.viewModel;
     }
 }
