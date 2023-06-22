@@ -15,5 +15,5 @@
 # delay only
 grep -v churn client/build/results/jmh/human.txt | grep Iteration -A 2 |\
 grep -v Warmup | xargs -L 2 |\
-sed -r 's/Iteration (.*): (.*\..*) ms\/op -: (.*) ms/\1, \2, \3/' >\
+sed -r 's/Iteration (.*): (.*\..*) ms\/op -: (.*) ms/\1, \2/' >\
 client/build/results/jmh/res-1.csv

@@ -27,7 +27,8 @@ public class InsertDeleteBenchmark {
     public static class InsertDeleteState extends DefaultState {
         static final int N = 6000;
         static final int warmUpN = 1000;
-        static final int dataN = 3500; // = (N + warmUpN) / 2
+        static final int dataN = 3500; // = (N + warmUpN) / 2, because data used both in warm up and benchmark
+        static final int switchN = 100;
 
         @Override
         public void doSetup() {
@@ -37,29 +38,31 @@ public class InsertDeleteBenchmark {
 
             // prepare warmup data
             int inserted = 0;
-            int location = -1;
+            int location = 0;
             for (int i = 0; i < warmUpN; i++) {
-                if (Math.floor(i / 100) % 2 == 0) {
-                    location++;
+                if (Math.floor(i / switchN) % 2 == 0) {
                     this.data.add(new InputData(location, false, dataArray[inserted]));
+                    location++;
                     inserted++;
                 } else {
-                    this.data.add(new InputData(99 - location, true, null));
-                    location--;
+                    this.data.add(new InputData(0, true, null));
+                    if (location != 0)
+                        location = 0;
                 }
             }
 
             // prepare benchmark data
             inserted = 0;
-            location = -1;
+            location = 0;
             for (int i = 0; i < N; i++) {
-                if (Math.floor(i / 100) % 2 == 0) {
-                    location++;
+                if (Math.floor(i / switchN) % 2 == 0) {
                     this.data.add(new InputData(location, false, dataArray[inserted]));
+                    location++;
                     inserted++;
                 } else {
-                    this.data.add(new InputData(99 - location, true, null));
-                    location--;
+                    this.data.add(new InputData(0, true, null));
+                    if (location != 0)
+                        location = 0;
                 }
             }
         }
