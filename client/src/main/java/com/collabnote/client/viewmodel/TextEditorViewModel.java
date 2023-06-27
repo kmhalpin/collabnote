@@ -188,7 +188,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
         CRDTItemSerializable serializedItem = item.serialize();
 
-        this.document.getEntity().getOperationBuffer().add(serializedItem);
+        this.document.getEntity().addOperationBuffer(serializedItem);
         // might try to send in network thread by the queue
         this.collaborationRepository.sendInsert(this.document.getEntity().getShareID(), serializedItem);
     }
@@ -204,7 +204,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
         for (CRDTItem i : item) {
             CRDTItemSerializable serializedItem = i.serialize();
 
-            this.document.getEntity().getOperationBuffer().add(serializedItem);
+            this.document.getEntity().addOperationBuffer(serializedItem);
             this.collaborationRepository.sendDelete(this.document.getEntity().getShareID(), serializedItem);
         }
     }
@@ -248,12 +248,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
                 break;
             // acknowledge sent
             case DONE:
-                for (int i = 0; i < this.document.getEntity().getOperationBuffer().size(); i++) {
-                    if (this.document.getEntity().getOperationBuffer().get(i).id
-                            .equals(data.getCrdtItem().id)) {
-                        this.document.getEntity().getOperationBuffer().remove(i);
-                    }
-                }
+                this.document.getEntity().ackOperationBuffer(data.getCrdtItem());
                 break;
             // after connected
             case CONNECT:
