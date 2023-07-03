@@ -3,26 +3,47 @@ package com.collabnote.server.collaborate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.collabnote.crdt.CRDT;
 import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTRemoteTransaction;
+import com.collabnote.crdt.Transaction;
 import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.server.gc.GarbageCollectorManager;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
 
 public class Collaborate {
+    public static boolean withGC = true;
     public String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
-    private GCCRDT gccrdt;
+    private CRDT crdt;
     private GarbageCollectorManager gcManager;
 
     public Collaborate(String shareID) {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.gcManager = new GarbageCollectorManager(this);
-        this.gccrdt = new GCCRDT(-1, gcManager, null);
-        this.gcManager.setCrdt(gccrdt);
+        if (withGC) {
+            this.gcManager = new GarbageCollectorManager(this);
+            GCCRDT gccrdt = new GCCRDT(-1, gcManager, null);
+            this.crdt = gccrdt;
+            this.gcManager.setCrdt(gccrdt);
+        } else {
+            this.crdt = new CRDT(-1, new CRDTRemoteTransaction() {
+
+                @Override
+                public void onRemoteCRDTInsert(Transaction transaction) {
+                    transaction.execute();
+                }
+
+                @Override
+                public void onRemoteCRDTDelete(Transaction transaction) {
+                    transaction.execute();
+                }
+
+            }, null);
+        }
     }
 
     public void broadcast(DataPayload data) {
@@ -36,15 +57,15 @@ public class Collaborate {
     }
 
     public void delete(CRDTItemSerializable item) {
-        this.gccrdt.tryRemoteDelete(item);
+        this.crdt.tryRemoteDelete(item);
     }
 
     public void insert(CRDTItemSerializable item) {
-        this.gccrdt.tryRemoteInsert(item);
+        this.crdt.tryRemoteInsert(item);
     }
 
     public List<CRDTItemSerializable> getVersionVector() {
-        return this.gccrdt.getVersionVector().serialize();
+        return this.crdt.getVersionVector().serialize();
     }
 
     // @Override
