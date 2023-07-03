@@ -11,41 +11,42 @@ import com.collabnote.crdt.CRDTRemoteTransaction;
 
 public class TCRDT extends CRDT {
     ScheduledExecutorService gcTimer;
-    CRDTItem delimiter, tail;
+    CRDTItem tail;
     boolean changed;
 
     public TCRDT(int agent, CRDTRemoteTransaction remoteTransaction, CRDTLocalListener localListener) {
         super(agent, remoteTransaction, localListener);
 
         // oooooo|bbbb\/ddd
-        // b = first buffer, d = second buffer, | = delimiter (separate non gc and first
-        // buffer),
+        // b = first buffer, d = second buffer, | = most right non gc (separate non gc
+        // and first buffer),
         // \/ = tail (separate first and second buffer).
-        this.tail = this.delimiter = null;
+        this.tail = null;
         this.changed = false;
         this.gcTimer = Executors.newScheduledThreadPool(1);
         this.gcTimer.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
-                try {
-                    lock.lock();
-                    if (!changed) {
-                        // if no changes, first buffer moved to second buffer
-                        tail = delimiter;
-                    }
-                } finally {
-                    if (changed)
-                        changed = false;
+                if (tail != null)
+                    try {
+                        lock.lock();
+                        if (!changed) {
+                            // if no changes, scan new first buffer, old first buffer moved to second buffer
+                            tail = scanDelimiter(tail);
+                        }
+                    } finally {
+                        if (changed)
+                            changed = false;
 
-                    lock.unlock();
+                        lock.unlock();
 
-                    // eventually remove second buffer
-                    if (tail != null && tail.right != null) {
-                        tail.right.left = null;
-                        tail.right = null;
+                        // eventually remove second buffer
+                        if (tail.right != null) {
+                            tail.right.left = null;
+                            tail.right = null;
+                        }
                     }
-                }
             }
 
         }, 0, 15, TimeUnit.SECONDS);
@@ -54,26 +55,14 @@ public class TCRDT extends CRDT {
     @Override
     protected void integrate(CRDTItem item) {
         super.integrate(item);
-        if (item.right == null) { // if new item added on most right, buffer resetted
-            this.tail = this.delimiter = item;
-        } else if (item.left != null
-                && item.left.isDeleted
-                && item.right.isDeleted
-                && scanDelimiter(item.left) == this.delimiter) { // if new item added on the first buffer, remove non gc
-            this.delimiter = item.right;
-        }
         this.changed = true;
+        if (item.right == null)
+            tail = item;
     }
 
     @Override
     public void setDeleted(CRDTItem item) {
-        super.delete(item);
-        // check if item is garbage collectable, and it will collected in first buffer
-        if (this.delimiter != null
-                && this.delimiter.isDeleted
-                && item.right == this.delimiter) {
-            this.delimiter = scanDelimiter(this.delimiter);
-        }
+        super.setDeleted(item);
         this.changed = true;
     }
 
