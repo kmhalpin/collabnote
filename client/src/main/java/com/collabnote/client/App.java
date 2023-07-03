@@ -5,6 +5,8 @@ package com.collabnote.client;
 
 import com.collabnote.client.ui.MainFrame;
 import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.ui.document.CRDTDocumentBind;
+import com.collabnote.client.ui.document.FakeCRDTDocument;
 import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 import java.awt.EventQueue;
@@ -13,16 +15,18 @@ public class App {
     private TextEditorViewModel viewModel;
 
     public App(boolean visible) {
-        CRDTDocument document = new CRDTDocument();
-        this.viewModel = new TextEditorViewModel(document);
-        if (visible)
+        if (visible) {
+            CRDTDocumentBind document = new CRDTDocument();
+            this.viewModel = new TextEditorViewModel(document);
             EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    MainFrame frame = new MainFrame(viewModel, document);
+                    MainFrame frame = new MainFrame(viewModel, (CRDTDocument) document);
                     frame.setVisible(visible);
                 }
             });
+        } else
+            this.viewModel = new TextEditorViewModel(new FakeCRDTDocument());
     }
 
     public static void main(String[] args) {

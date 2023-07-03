@@ -10,16 +10,17 @@ import org.apache.commons.math3.util.Pair;
 
 import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.crdt.CRDTItem;
-import com.collabnote.crdt.CRDTRemoteTransaction;
 import com.collabnote.crdt.Transaction;
 
-public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTRemoteTransaction {
+public class CRDTDocument extends PlainDocument implements DocumentListener, CRDTDocumentBind {
     private DocumentEntity entity;
 
+    @Override
     public DocumentEntity getEntity() {
         return entity;
     }
 
+    @Override
     public void bindCrdt(DocumentEntity entity) {
         try {
             this.writeLock();

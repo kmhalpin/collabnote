@@ -16,7 +16,7 @@ import com.collabnote.client.data.StateVisual;
 import com.collabnote.client.data.StateVisualListener;
 import com.collabnote.client.data.entity.DocumentEntity;
 import com.collabnote.client.socket.ClientSocketListener;
-import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.ui.document.CRDTDocumentBind;
 import com.collabnote.crdt.gc.DeleteGroupSerializable;
 import com.collabnote.crdt.gc.GCCRDT;
 import com.collabnote.crdt.time.TCRDT;
@@ -29,8 +29,8 @@ import com.collabnote.socket.Type;
 
 public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListener {
     // user id
-    private int agent = RandomUtils.nextInt();
-    private CRDTDocument document;
+    public int agent = RandomUtils.nextInt();
+    private CRDTDocumentBind document;
     private HashMap<Integer, Object> userCarets;
 
     private CollaborationRepository collaborationRepository;
@@ -43,7 +43,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     private StateVisual stateVisual;
 
-    public TextEditorViewModel(CRDTDocument document) {
+    public TextEditorViewModel(CRDTDocumentBind document) {
         this.collaborationRepository = new CollaborationRepository();
         this.documentModel = new DocumentModel();
         this.document = document;

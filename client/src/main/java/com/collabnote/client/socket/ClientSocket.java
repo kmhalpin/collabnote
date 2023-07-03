@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import com.collabnote.socket.Const;
@@ -34,6 +35,9 @@ public class ClientSocket implements Closeable {
                     DataPayload data = sendQueue.remove();
                     try {
                         writer.writeObject(data);
+                    } catch (SocketException e) {
+                        e.printStackTrace();
+                        break;
                     } catch (IOException e) {
                         e.printStackTrace();
                         // retry later
