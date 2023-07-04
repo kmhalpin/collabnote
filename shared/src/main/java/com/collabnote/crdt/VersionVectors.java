@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 
 // optimized vector clocks
 public class VersionVectors implements Serializable {
-    HashMap<Integer, ArrayList<CRDTItem>> versionVector;
+    public HashMap<Integer, ArrayList<CRDTItem>> versionVector;
 
     public VersionVectors() {
         this.versionVector = new HashMap<>();
@@ -48,7 +48,7 @@ public class VersionVectors implements Serializable {
 
     public int get(int agent) {
         ArrayList<CRDTItem> version = this.versionVector.get(agent);
-        if (version == null) {
+        if (version == null || version.size() == 0) {
             return 0;
         }
         return version.get(version.size() - 1).id.seq;
@@ -63,6 +63,8 @@ public class VersionVectors implements Serializable {
         ArrayList<CRDTItem> version = this.versionVector.get(id.agent);
         for (int i = 0; i < version.size(); i++) {
             CRDTItem item = version.get(i);
+            if (item == null)
+                break;
             if (item.id.equals(id)) {
                 return item;
             }

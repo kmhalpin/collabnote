@@ -42,9 +42,16 @@ public class TCRDT extends CRDT {
                         lock.unlock();
 
                         // eventually remove second buffer
-                        if (tail.right != null) {
+                        CRDTItem tailRight = tail.right;
+                        if (tailRight != null) {
+                            // null tail
                             tail.right.left = null;
                             tail.right = null;
+                            // remove from version vector
+                            while (tailRight != null) {
+                                versionVector.remove(tailRight);
+                                tailRight = tailRight.right;
+                            }
                         }
                     }
             }
