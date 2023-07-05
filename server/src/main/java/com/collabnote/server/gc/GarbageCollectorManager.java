@@ -179,12 +179,14 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
         if (items != null && items.size() > 0) {
             // if conflict gc item found do recover
-            this.collaborate.broadcast(
-                    DataPayload.recoverPayload(this.collaborate.shareID, result.getSecond().serialize(),
-                            items));
+            DataPayload data = DataPayload.recoverPayload(this.collaborate.shareID, result.getSecond().serialize(),
+                    items);
+            data.setAgent(result.getSecond().serialize().id.agent);
+            this.collaborate.broadcast(data);
         } else {
-            this.collaborate
-                    .broadcast(DataPayload.insertPayload(this.collaborate.shareID, result.getSecond().serialize()));
+            DataPayload data = DataPayload.insertPayload(this.collaborate.shareID, result.getSecond().serialize());
+            data.setAgent(result.getSecond().serialize().id.agent);
+            this.collaborate.broadcast(data);
         }
     }
 
@@ -193,8 +195,10 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         lock.lock();
         Pair<Integer, CRDTItem> result = transaction.execute();
         lock.unlock();
-        this.collaborate.broadcast(DataPayload.deletePayload(this.collaborate.shareID,
-                result.getSecond().serialize()));
+        DataPayload data = DataPayload.deletePayload(this.collaborate.shareID,
+                result.getSecond().serialize());
+        data.setAgent(result.getSecond().serialize().id.agent);
+        this.collaborate.broadcast(data);
     }
 
 }
