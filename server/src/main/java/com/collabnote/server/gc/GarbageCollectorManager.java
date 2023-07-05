@@ -25,7 +25,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
     public void run() {
         do {
             try {
-                Thread.sleep(15000);
+                Thread.sleep(1500);
 
                 try {
                     lock.lock();
