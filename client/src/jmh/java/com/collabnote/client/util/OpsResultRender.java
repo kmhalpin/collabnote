@@ -1,4 +1,4 @@
-package com.collabnote.client;
+package com.collabnote.client.util;
 
 import java.io.File;
 import java.io.IOException;
