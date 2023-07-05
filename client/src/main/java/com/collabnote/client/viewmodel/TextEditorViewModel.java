@@ -291,7 +291,8 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
 
     @Override
     public void onFinished() {
-        this.collaborationListener.collaborationStatusListener(false);
+        if (this.collaborationListener != null)
+            this.collaborationListener.collaborationStatusListener(false);
         this.userCarets = new HashMap<>();
     }
 }

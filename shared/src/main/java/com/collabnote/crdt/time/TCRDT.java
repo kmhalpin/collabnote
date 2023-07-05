@@ -23,6 +23,7 @@ public class TCRDT extends CRDT {
         // \/ = tail (separate first and second buffer).
         this.tail = null;
         this.changed = false;
+        // thread not shutdown
         this.gcTimer = Executors.newScheduledThreadPool(1);
         this.gcTimer.scheduleAtFixedRate(new Runnable() {
 

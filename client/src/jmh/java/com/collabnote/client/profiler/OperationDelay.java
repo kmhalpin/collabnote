@@ -11,8 +11,6 @@ import org.openjdk.jmh.results.IterationResult;
 import org.openjdk.jmh.results.ScalarResult;
 
 public class OperationDelay implements InternalProfiler {
-    long start;
-
     @Override
     public String getDescription() {
         return "Delay";
@@ -25,14 +23,13 @@ public class OperationDelay implements InternalProfiler {
         } catch (InterruptedException e) {
             e.printStackTrace();
         };
-        this.start = System.nanoTime();
     }
 
     @Override
     public Collection<ScalarResult> afterIteration(BenchmarkParams benchmarkParams, IterationParams iterationParams,
             IterationResult result) {
                 Collection<ScalarResult> results = new ArrayList<>();
-                results.add(new ScalarResult("-", (System.nanoTime() - this.start) / 1000000, "ms", AggregationPolicy.MAX));
+                results.add(new ScalarResult("-", 0, "ms", AggregationPolicy.MAX));
                 return results;
     }
 

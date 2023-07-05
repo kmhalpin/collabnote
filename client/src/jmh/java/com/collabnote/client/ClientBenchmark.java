@@ -1,5 +1,7 @@
 package com.collabnote.client;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -11,12 +13,16 @@ import javax.swing.text.BadLocationException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Warmup;
+
+import com.collabnote.crdt.CRDTItem;
+
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
@@ -154,27 +160,62 @@ public class ClientBenchmark {
         List<InputData> data;
         String rawData;
         int i;
+        ArrayList<CRDTItem> versionVector;
+        FileWriter fWriter;
 
         @TearDown
-        public void doTearDown() {
+        public void tearDown() {
+            try {
+                Thread.sleep(35000);
+                doTearDown();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            try {
+                fWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // try {
-            //     OpsResultRender.render(this.app.getViewModel().getCurrentReplica(), new File(
-            //             "/Users/kemasmhuseinalviansyah/Documents/Code/Java/collabnote/client/build/results/jmh/render.png"));
+            // OpsResultRender.render(this.app.getViewModel().getCurrentReplica(), new File(
+            // "/Users/kemasmhuseinalviansyah/Documents/Code/Java/collabnote/client/build/results/jmh/render.png"));
             // } catch (IOException e) {
-            //     e.printStackTrace();
+            // e.printStackTrace();
             // }
+        }
+
+        @TearDown(Level.Iteration)
+        public void doTearDown() {
+            try {
+                fWriter.write(versionVector.size() + "\n");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         public abstract void doSetup();
 
         @Setup
         public void setup() {
+            try {
+                this.fWriter = new FileWriter(
+                        "/Users/kemasmhuseinalviansyah/Documents/Code/Java/collabnote/client/build/results/jmh/ops.csv");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             this.app = new App(false);
             this.i = 0;
             this.data = new ArrayList<>();
+            trackVersionVector();
 
             doSetup();
             System.out.println("data:\n" + Arrays.toString(data.toArray()));
+        }
+
+        public void trackVersionVector() {
+            this.versionVector = new ArrayList<>();
+            app.getViewModel().getCurrentReplica().getVersionVector().versionVector
+                    .put(app.getViewModel().agent, this.versionVector);
         }
     }
 

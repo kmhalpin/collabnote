@@ -29,7 +29,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
 
                 try {
                     lock.lock();
-                    System.out.println("GC START");
+                    // System.out.println("GC START");
                     ArrayList<DeleteGroupSerializable> deleteGroupSerialize = new ArrayList<>();
                     GCCRDTItem ops = (GCCRDTItem) this.crdt.getStart();
 
@@ -48,7 +48,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                                     ops.setServerGc(true);
 
                                     // debug
-                                    System.out.print(leftDelimiter.content + " " + ops.content + ", ");
+                                    // System.out.print(leftDelimiter.content + " " + ops.content + ", ");
 
                                     deleteGroupSerialize.add(new DeleteGroupSerializable(leftDelimiter.serialize(),
                                             ops.serialize(), null));
@@ -68,7 +68,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
                     }
 
                     if (deleteGroupSerialize.size() > 0) {
-                        System.out.println();
+                        System.out.println(deleteGroupSerialize.size());
                         // broadcast gc
                         this.collaborate
                                 .broadcast(DataPayload.gcPayload(this.collaborate.shareID, deleteGroupSerialize));
