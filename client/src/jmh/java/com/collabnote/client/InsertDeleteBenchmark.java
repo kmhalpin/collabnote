@@ -26,6 +26,7 @@ public class InsertDeleteBenchmark {
      */
     @State(Scope.Benchmark)
     public static class InsertDeleteState extends DefaultState {
+        static final boolean ltr = false;
         static final int N = 11000;
         static final int warmUpN = 2000;
         static final int switchN = 1000;
@@ -41,28 +42,25 @@ public class InsertDeleteBenchmark {
             int location = 0;
             for (int i = 0; i < warmUpN; i++) {
                 if (Math.floor(i / switchN) % 2 == 0) {
-                    this.data.add(new InputData(location, false, dataArray[inserted]));
+                    this.data.add(new InputData(ltr ? location : 0, false, dataArray[inserted]));
                     location++;
                     inserted++;
                 } else {
-                    this.data.add(new InputData(0, true, null));
-                    if (location != 0)
-                        location = 0;
+                    location--;
+                    this.data.add(new InputData(ltr ? location : 0, true, null));
                 }
             }
 
             // prepare benchmark data
-            inserted = 0;
             location = 0;
             for (int i = 0; i < N; i++) {
                 if (Math.floor(i / switchN) % 2 == 0) {
-                    this.data.add(new InputData(location, false, dataArray[inserted]));
+                    this.data.add(new InputData(ltr ? location : 0, false, dataArray[inserted]));
                     location++;
                     inserted++;
                 } else {
-                    this.data.add(new InputData(0, true, null));
-                    if (location != 0)
-                        location = 0;
+                    location--;
+                    this.data.add(new InputData(ltr ? location : 0, true, null));
                 }
             }
 
