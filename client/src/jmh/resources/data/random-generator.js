@@ -19,8 +19,7 @@ const newOps = (index, isRemove, character) => ({
 const randomInt = (min, max) => Math.floor((Math.random()) * (max - min + 1)) + min;
 
 const N = 11000
-const insertN = 6000
-const data = crypto.randomBytes(insertN).toString('hex').substring(0, insertN).split("");
+const data = crypto.randomBytes(N).toString('hex').substring(0, N).split("");
 
 let inserted = 0;
 let operations = [];
