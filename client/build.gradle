@@ -27,7 +27,7 @@ jar {
 }
 
 jmh {
-    includes = ['com\\.collabnote\\.client\\.InsertDeleteBenchmark.*']
+    includes = ['com\\.collabnote\\.client\\.RandomBenchmark.*']
     fork = 1
     profilers = [//'gc',
         // 'com.collabnote.client.profiler.MemoryUsageProfiler',
