@@ -57,6 +57,7 @@ public class ClientSocket implements Closeable {
                     ObjectInputStream reader = new ObjectInputStream(socket.getInputStream());
 
                     clientSocketListener.onStart();
+                    senderThread.start();
                     do {
                         try {
                             DataPayload data = (DataPayload) reader.readObject();
@@ -75,7 +76,6 @@ public class ClientSocket implements Closeable {
             }
         });
         this.networkThread.start();
-        this.senderThread.start();
     }
 
     @Override

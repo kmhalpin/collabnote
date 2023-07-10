@@ -1,5 +1,5 @@
 package com.collabnote.client.viewmodel;
 
 public interface TextEditorViewModelCollaborationListener {
-    void collaborationStatusListener(boolean status);
+    void collaborationStatusListener(boolean status, String id);
 }

@@ -5,11 +5,13 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 
+import javax.swing.DefaultButtonModel;
 import javax.swing.JFileChooser;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.event.ChangeListener;
 
 import com.collabnote.client.viewmodel.TextEditorViewModel;
 import com.collabnote.client.viewmodel.TextEditorViewModelCollaborationListener;
@@ -18,6 +20,7 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
     private JMenu fileMenu, editMenu, accountMenu;
     private JMenuItem fileNewItem, fileSaveItem, fileLoadItem, fileShareItem, fileConnectItem, accountPrint,
             accountOfflineToggle;
+    private JMenuItem collaboration;
 
     public Menu(TextEditorViewModel viewModel) {
         viewModel.setCollaborationListener(this);
@@ -120,13 +123,28 @@ public class Menu extends JMenuBar implements TextEditorViewModelCollaborationLi
         accountMenu.add(accountPrint);
         accountMenu.add(accountOfflineToggle);
 
+        collaboration = new JMenuItem();
+        if (collaboration.getModel() instanceof DefaultButtonModel) {
+            DefaultButtonModel model = (DefaultButtonModel) collaboration.getModel();
+            model.setArmed(false);
+            for (ChangeListener cl : model.getChangeListeners()) {
+                model.removeChangeListener(cl);
+            }
+        }
+        collaboration.setFocusable(false);
+
         add(fileMenu);
-        add(editMenu);
+        // add(editMenu);
         add(accountMenu);
+        add(collaboration);
     }
 
     @Override
-    public void collaborationStatusListener(boolean status) {
+    public void collaborationStatusListener(boolean status, String id) {
+        if (id != null) {
+            id = "Document ID: " + id;
+        }
+        this.collaboration.setText(id);
         this.accountOfflineToggle.setText(status ? "Offline Mode" : "Online Mode");
     }
 }

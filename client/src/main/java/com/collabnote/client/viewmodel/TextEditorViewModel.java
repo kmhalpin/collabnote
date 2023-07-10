@@ -254,7 +254,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
             case CONNECT:
                 this.document.getEntity().setShareID(data.getShareID());
                 if (this.collaborationListener != null)
-                    this.collaborationListener.collaborationStatusListener(true);
+                    this.collaborationListener.collaborationStatusListener(true, data.getShareID());
                 break;
             // server going to share to client
             case SHARE:
@@ -292,7 +292,7 @@ public class TextEditorViewModel implements CRDTLocalListener, ClientSocketListe
     @Override
     public void onFinished() {
         if (this.collaborationListener != null)
-            this.collaborationListener.collaborationStatusListener(false);
+            this.collaborationListener.collaborationStatusListener(false, null);
         this.userCarets = new HashMap<>();
     }
 }
