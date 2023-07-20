@@ -26,11 +26,18 @@ public class InsertDeleteBenchmark {
      */
     @State(Scope.Benchmark)
     public static class InsertDeleteState extends DefaultState {
-        static final boolean ltr = false;
+        static final boolean ltr = true;
         static final int N = 11000;
         static final int warmUpN = 2000;
         static final int switchN = 1000;
         static final int dataN = 7000; // data used both in warm up and benchmark when insert switch
+        
+        // demo
+        // static final boolean ltr = false;
+        // static final int N = 3000;
+        // static final int warmUpN = 0;
+        // static final int switchN = 1000;
+        // static final int dataN = 2000;
 
         @Override
         public void doSetup() {
