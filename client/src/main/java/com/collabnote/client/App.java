@@ -3,220 +3,37 @@
  */
 package com.collabnote.client;
 
-import com.collabnote.client.socket.ClientSocket;
-import com.collabnote.client.socket.ClientSocketListener;
 import com.collabnote.client.ui.MainFrame;
-import com.collabnote.crdt.CRDT;
-import com.collabnote.crdt.CRDTItem;
-import com.collabnote.crdt.CRDTListener;
-import com.collabnote.socket.DataPayload;
-import com.collabnote.socket.Type;
+import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.ui.document.CRDTDocumentBind;
+import com.collabnote.client.ui.document.FakeCRDTDocument;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
 
 import java.awt.EventQueue;
-import java.io.IOException;
-import java.util.UUID;
 
-import javax.swing.text.BadLocationException;
+public class App {
+    private TextEditorViewModel viewModel;
 
-public class App implements Controller, ClientSocketListener, CRDTListener {
-    private String agent = UUID.randomUUID().toString();
-    private MainFrame frame;
-    private CRDT currentDoc = new CRDT(this);
-    private ClientSocket clientSocket;
-    private String shareID;
-
-    public App() {
-        Controller controller = this;
-
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                frame = new MainFrame(currentDoc, controller);
-                frame.setVisible(true);
-            }
-        });
+    public App(boolean visible) {
+        if (visible) {
+            CRDTDocumentBind document = new CRDTDocument();
+            this.viewModel = new TextEditorViewModel(document);
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    MainFrame frame = new MainFrame(viewModel, (CRDTDocument) document);
+                    frame.setVisible(visible);
+                }
+            });
+        } else
+            this.viewModel = new TextEditorViewModel(new FakeCRDTDocument());
     }
 
     public static void main(String[] args) {
-        new App();
+        new App(true);
     }
 
-    @Override
-    public void newNote() {
-        if (frame == null)
-            return;
-
-        currentDoc = new CRDT(this);
-        if(clientSocket != null){
-            try {
-                clientSocket.close();
-            } catch (IOException e) {
-            }
-            clientSocket = null;
-        }
-        shareID = null;
-        frame.newEditorPanel(this);
-    }
-
-    @Override
-    public void shareNote(String host) {
-        ClientSocketListener mainListener = this;
-
-        if (currentDoc == null)
-            return;
-
-        clientSocket = new ClientSocket(host, agent, new ClientSocketListener() {
-            boolean isReady = false;
-
-            @Override
-            public void onStart() {
-                // create share space
-                clientSocket.sendData(new DataPayload(Type.SHARE, null, null, 0));
-                mainListener.onStart();
-            }
-
-            @Override
-            public void onReceiveData(DataPayload data) {
-                if (isReady)
-                    mainListener.onReceiveData(data);
-
-                if (data.getType() == Type.SHARE) {
-                    shareID = data.getShareID();
-                    System.out.println(shareID);
-                    isReady = true;
-
-                    // upload crdt
-                    for (CRDTItem crdtItem : currentDoc.returnCopy()) {
-                        clientSocket.sendData(new DataPayload(Type.INSERT, shareID, crdtItem, 0));
-                    }
-                    clientSocket.sendData(new DataPayload(Type.SHARE, shareID, null, 0));
-                }
-            }
-
-            @Override
-            public void onFinished() {
-                mainListener.onFinished();
-            }
-
-        });
-    }
-
-    @Override
-    public void connectNote(String host, String shareID) {
-        ClientSocketListener mainListener = this;
-
-        currentDoc = new CRDT(this);
-        this.shareID = shareID;
-        frame.newEditorPanel(this);
-
-        clientSocket = new ClientSocket(host, agent, new ClientSocketListener() {
-            boolean isReady = false;
-
-            @Override
-            public void onStart() {
-                clientSocket.sendData(new DataPayload(Type.CONNECT, shareID, null, 0));
-                mainListener.onStart();
-            }
-
-            @Override
-            public void onReceiveData(DataPayload data) {
-                if (isReady || data.getType() == Type.INSERT || data.getType() == Type.DELETE)
-                    mainListener.onReceiveData(data);
-
-                if (data.getType() == Type.CONNECT)
-                    isReady = true;
-            }
-
-            @Override
-            public void onFinished() {
-                mainListener.onFinished();
-            }
-
-        });
-    }
-
-    @Override
-    public void onStart() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void onReceiveData(DataPayload data) {
-        switch (data.getType()) {
-            case CARET:
-                frame.getEditorPanel().updateCaret(data.getAgent(), data.getCaretIndex());
-                break;
-            case DELETE:
-                currentDoc.addDeleteOperationToWaitList(data.getCrdtItem());
-                break;
-            case INSERT:
-                currentDoc.addInsertOperationToWaitList(data.getCrdtItem());
-                break;
-            case DONE:
-                break;
-            case CONNECT:
-            case SHARE:
-                break;
-            default:
-                break;
-        }
-    }
-
-    @Override
-    public void onFinished() {
-        newNote();
-    }
-
-    @Override
-    public void updateCaret(int index) {
-        if (clientSocket == null || shareID == null)
-            return;
-
-        clientSocket.sendData(new DataPayload(Type.CARET, shareID, null, index));
-    }
-
-    @Override
-    public void insertCRDT(int offset, String changes) {
-        CRDTItem crdtItem = currentDoc.localInsert(agent, offset, changes);
-        if (clientSocket == null || shareID == null)
-            return;
-
-        clientSocket.sendData(new DataPayload(Type.INSERT, shareID, crdtItem, 0));
-    }
-
-    @Override
-    public void deleteCRDT(int offset) {
-        CRDTItem crdtItem = currentDoc.localDelete(agent, offset);
-        if (clientSocket == null || shareID == null)
-            return;
-
-        clientSocket.sendData(new DataPayload(Type.DELETE, shareID, crdtItem, 0));
-    }
-
-    @Override
-    public void printCRDT() {
-        System.out.println(currentDoc.toString());
-    }
-
-    @Override
-    public CRDT getCRDT() {
-        return this.currentDoc;
-    }
-
-    @Override
-    public void onCRDTInsert(CRDTItem item) {
-        try {
-            frame.getEditorPanel().getModel().asyncInsert(item);
-        } catch (BadLocationException e) {
-        }
-    }
-
-    @Override
-    public void onCRDTDelete(CRDTItem item) {
-        try {
-            frame.getEditorPanel().getModel().asyncDelete(item);
-        } catch (BadLocationException e) {
-        }
+    public TextEditorViewModel getViewModel() {
+        return this.viewModel;
     }
 }

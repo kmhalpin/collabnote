@@ -5,6 +5,8 @@
 plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
+    id "me.champeau.jmh"
+    id "org.dripto.gradle.plugin.plantuml.plantuml-generator"
 }
 
 repositories {
@@ -19,6 +21,8 @@ dependencies {
 
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    jmh 'org.openjdk.jmh:jmh-core:0.9'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:0.9'
 }
 
 tasks.named('test') {
@@ -27,7 +31,15 @@ tasks.named('test') {
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE 
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+}
+
+tasks.withType(org.dripto.gradle.plugin.plantuml.task.PlantUmlGeneratorTask) { 
+    doFirst{
+        properties.config.whitelistRegexp = "com.collabnote.*"
+    }
+    destination="${buildDir}/reports/class-diagram.txt"
 }

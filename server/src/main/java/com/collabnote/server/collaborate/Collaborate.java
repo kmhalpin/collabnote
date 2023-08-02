@@ -4,23 +4,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.collabnote.crdt.CRDT;
-import com.collabnote.crdt.CRDTItem;
-import com.collabnote.crdt.CRDTListener;
+import com.collabnote.crdt.CRDTItemSerializable;
+import com.collabnote.crdt.CRDTRemoteTransaction;
+import com.collabnote.crdt.Transaction;
+import com.collabnote.crdt.gc.GCCRDT;
+import com.collabnote.server.gc.GarbageCollectorManager;
 import com.collabnote.server.socket.ClientHandler;
 import com.collabnote.socket.DataPayload;
-import com.collabnote.socket.Type;
 
-public class Collaborate implements CRDTListener {
-    private String shareID;
+public class Collaborate {
+    public static boolean withGC = true;
+    public String shareID;
     private boolean isReady;
     private List<ClientHandler> clients;
-    private CRDT doc;
+    private CRDT crdt;
+    private GarbageCollectorManager gcManager;
 
     public Collaborate(String shareID) {
         this.shareID = shareID;
         this.isReady = false;
         this.clients = new ArrayList<>();
-        this.doc = new CRDT(this);
+        if (withGC) {
+            this.gcManager = new GarbageCollectorManager(this);
+            GCCRDT gccrdt = new GCCRDT(-1, gcManager, null);
+            this.crdt = gccrdt;
+            this.gcManager.setCrdt(gccrdt);
+        } else {
+            this.crdt = new CRDT(-1, new CRDTRemoteTransaction() {
+
+                @Override
+                public void onRemoteCRDTInsert(Transaction transaction) {
+                    transaction.execute();
+                }
+
+                @Override
+                public void onRemoteCRDTDelete(Transaction transaction) {
+                    transaction.execute();
+                }
+
+            }, null);
+        }
     }
 
     public void broadcast(DataPayload data) {
@@ -29,29 +52,31 @@ public class Collaborate implements CRDTListener {
         }
     }
 
-    public void delete(CRDTItem item) {
-        this.doc.addDeleteOperationToWaitList(item);
+    public int getClients() {
+        return clients.size();
     }
 
-    public void insert(CRDTItem item) {
-        this.doc.addInsertOperationToWaitList(item);
+    public void delete(CRDTItemSerializable item) {
+        this.crdt.tryRemoteDelete(item);
     }
 
-    public List<CRDTItem> getCRDTItems() {
-        return this.doc.returnCopy();
+    public void insert(CRDTItemSerializable item) {
+        this.crdt.tryRemoteInsert(item);
     }
 
-    @Override
-    public void onCRDTInsert(CRDTItem item) {
-        // TODO Auto-generated method stub
-
+    public List<CRDTItemSerializable> getVersionVector() {
+        return this.crdt.getVersionVector().serialize();
     }
 
-    @Override
-    public void onCRDTDelete(CRDTItem item) {
-        // TODO Auto-generated method stub
+    // @Override
+    // public void onCRDTInsert(CRDTItem item) {
+    // broadcast(DataPayload.ackInsertPayload(shareID, new CRDTItem(item)));
+    // }
 
-    }
+    // @Override
+    // public void onCRDTRemove(CRDTItem[] remove) {
+    // broadcast(DataPayload.ackDeletePayload(shareID, remove));
+    // }
 
     public boolean isReady() {
         return isReady;
@@ -66,7 +91,7 @@ public class Collaborate implements CRDTListener {
     }
 
     public boolean removeClient(ClientHandler client) {
-        DataPayload payload = new DataPayload(Type.CARET, this.shareID, null, -1);
+        DataPayload payload = DataPayload.caretPayload(this.shareID, -1);
         payload.setAgent(client.getAgent());
         this.broadcast(payload);
         return this.clients.remove(client);

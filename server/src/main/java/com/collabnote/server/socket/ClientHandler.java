@@ -5,7 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import com.collabnote.crdt.CRDTItem;
+import com.collabnote.crdt.CRDTItemSerializable;
 import com.collabnote.server.collaborate.Collaborate;
 import com.collabnote.server.collaborate.CollaborateDatabase;
 import com.collabnote.socket.DataPayload;
@@ -15,7 +15,7 @@ public class ClientHandler extends Thread {
     private CollaborateDatabase collaborateDatabase;
 
     private Collaborate collaborate;
-    private String agent;
+    private int agent;
     private ClientState state = ClientState.UNKNOWN;
     private Socket clientSocket;
     private ObjectInputStream reader;
@@ -36,9 +36,10 @@ public class ClientHandler extends Thread {
         if (writer == null)
             return;
 
-        if (data.getAgent() == null)
-            data.setAgent("server");
-        else if (data.getAgent().equals(this.agent))
+        if (data.getAgent() == 0)
+            // server agent identity
+            data.setAgent(-1);
+        else if (data.getAgent() == this.agent)
             return;
 
         try {
@@ -61,17 +62,17 @@ public class ClientHandler extends Thread {
                             break;
                         case DELETE:
                             if (this.state == ClientState.READY) {
-                                this.collaborate.broadcast(data);
+                                // this.collaborate.broadcast(data);
                                 this.collaborate.delete(data.getCrdtItem());
+                                sendData(DataPayload.donePayload(data.getCrdtItem()));
                             }
                             break;
                         case INSERT:
                             if (this.state == ClientState.READY) {
-                                this.collaborate.broadcast(data);
+                                // this.collaborate.broadcast(data);
                                 this.collaborate.insert(data.getCrdtItem());
+                                sendData(DataPayload.donePayload(data.getCrdtItem()));
                             }
-                            break;
-                        case DONE:
                             break;
 
                         // connection onboarding
@@ -90,7 +91,7 @@ public class ClientHandler extends Thread {
                                 this.state = ClientState.READY;
                                 this.collaborate.addClient(this);
 
-                                sendData(new DataPayload(Type.SHARE, shareID, null, 0));
+                                sendData(new DataPayload(Type.CONNECT, shareID, null, 0, null));
                             } else if (this.state == ClientState.READY) {
                                 this.collaborate.setReady(true);
                             }
@@ -104,16 +105,26 @@ public class ClientHandler extends Thread {
                                 this.collaborate = this.collaborateDatabase.get(data.getShareID());
                                 if (this.collaborate != null && this.collaborate.isReady()) {
                                     this.state = ClientState.READY;
-                                    this.collaborate.addClient(this);
 
-                                    for (CRDTItem crdtItem : this.collaborate.getCRDTItems()) {
-                                        sendData(new DataPayload(Type.INSERT, data.getShareID(), crdtItem, 0));
-                                    }
-                                    sendData(new DataPayload(Type.CONNECT, data.getShareID(), null, 0));
+                                    // send to client to share their changes
+                                    sendData(new DataPayload(Type.SHARE, this.collaborate.shareID, null, 0, null));
                                 } else {
                                     this.clientSocket.close();
                                 }
+                            } else if (this.state == ClientState.READY) {
+                                this.collaborate.addClient(this);
+
+                                // share server state
+                                for (CRDTItemSerializable crdtItem : this.collaborate.getVersionVector()) {
+                                    sendData(DataPayload.insertPayload(this.collaborate.shareID, crdtItem));
+                                }
+
+                                sendData(new DataPayload(Type.CONNECT, this.collaborate.shareID, null, 0, null));
                             }
+                            break;
+
+                        // gc manager
+                        case GC:
                             break;
                         default:
                             break;
@@ -137,7 +148,7 @@ public class ClientHandler extends Thread {
             this.collaborate.removeClient(this);
     }
 
-    public String getAgent() {
+    public int getAgent() {
         return agent;
     }
 }

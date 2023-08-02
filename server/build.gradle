@@ -4,14 +4,23 @@
 
 plugins {
     id 'com.collabnote.java-application-conventions'
+    id 'com.palantir.docker-run'
 }
 
 dependencies {
     implementation project(':shared')
     implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'org.apache.commons:commons-math3:3.6.1'
 }
 
 application {
     // Define the main class for the application.
     mainClass = 'com.collabnote.server.App'
+}
+
+dockerRun {
+    name 'collabnote-server'
+    image 'server'
+    ports '7768:7768'
+    daemonize true
 }

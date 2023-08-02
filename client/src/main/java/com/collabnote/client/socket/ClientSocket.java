@@ -5,19 +5,48 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import com.collabnote.socket.Const;
 import com.collabnote.socket.DataPayload;
 
 public class ClientSocket implements Closeable {
     private Thread networkThread;
+    private Thread senderThread;
+    private LinkedBlockingQueue<DataPayload> sendQueue;
     private Socket clientSocket = null;
     private boolean closed = false;
     private ObjectOutputStream writer = null;
-    private String agent;
 
-    public ClientSocket(String host, String agent, ClientSocketListener clientSocketListener) {
+    private int agent;
+
+    public ClientSocket(String host, int agent, ClientSocketListener clientSocketListener) {
+        this.sendQueue = new LinkedBlockingQueue<>();
         this.agent = agent;
+
+        this.senderThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!closed) {
+                    if (writer == null || sendQueue.size() < 1) {
+                        continue;
+                    }
+                    DataPayload data = sendQueue.remove();
+                    try {
+                        writer.writeObject(data);
+                    } catch (SocketException e) {
+                        e.printStackTrace();
+                        break;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        // retry later
+                        sendQueue.add(data);
+                    }
+                }
+                senderThread = null;
+            }
+        });
 
         this.networkThread = new Thread(new Runnable() {
             @Override
@@ -28,6 +57,7 @@ public class ClientSocket implements Closeable {
                     ObjectInputStream reader = new ObjectInputStream(socket.getInputStream());
 
                     clientSocketListener.onStart();
+                    senderThread.start();
                     do {
                         try {
                             DataPayload data = (DataPayload) reader.readObject();
@@ -40,10 +70,12 @@ public class ClientSocket implements Closeable {
                 }
                 writer = null;
                 closed = true;
+                clientSocket = null;
+                networkThread = null;
                 clientSocketListener.onFinished();
             }
         });
-        networkThread.start();
+        this.networkThread.start();
     }
 
     @Override
@@ -56,16 +88,6 @@ public class ClientSocket implements Closeable {
 
     public void sendData(DataPayload data) {
         data.setAgent(this.agent);
-
-        if (writer == null)
-            return;
-        try {
-            writer.writeObject(data);
-        } catch (IOException e) {
-        }
-    }
-
-    public boolean isRunning() {
-        return this.networkThread.isAlive();
+        this.sendQueue.add(data);
     }
 }

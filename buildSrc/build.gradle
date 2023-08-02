@@ -11,3 +11,9 @@ repositories {
     // Use the plugin portal to apply community plugins in convention plugins.
     gradlePluginPortal()
 }
+
+dependencies {
+    implementation "com.palantir.gradle.docker:gradle-docker:0.34.0"
+    implementation "me.champeau.jmh:jmh-gradle-plugin:0.6.8"
+    implementation "gradle.plugin.org.dripto.gradle.plugin.plantuml:plugin:0.0.3"
+}

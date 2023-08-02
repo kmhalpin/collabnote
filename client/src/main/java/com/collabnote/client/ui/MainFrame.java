@@ -4,11 +4,18 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.GroupLayout.Alignment;
 
-import com.collabnote.client.Controller;
-import com.collabnote.crdt.CRDT;
+import com.collabnote.client.ui.document.CRDTDocument;
+import com.collabnote.client.viewmodel.TextEditorViewModel;
+import com.collabnote.client.viewmodel.TextEditorViewModelImageListener;
+
+import java.awt.Dimension;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
+import javax.swing.JScrollPane;
 
 import mdlaf.MaterialLookAndFeel;
 import mdlaf.themes.JMarsDarkTheme;
@@ -22,28 +29,44 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private TextEditorViewModel viewModel;
+
     private GroupLayout gLayout;
+    private JLayeredPane layeredPane;
     private EditorPanel editorPanel;
+    private StateVisual stateVisual;
+    private JScrollPane stateVisualContainer;
 
-    public MainFrame(CRDT doc, Controller controller) {
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-
-        setJMenuBar(new Menu(controller));
-
-        gLayout = new GroupLayout(getContentPane());
-        getContentPane().setLayout(gLayout);
-
-        newEditorPanel(controller);
-
-        pack();
+    public TextEditorViewModel getViewModel() {
+        return this.viewModel;
     }
 
-    public void newEditorPanel(Controller controller) {
-        if (editorPanel != null)
-            getContentPane().remove(editorPanel);
+    public MainFrame(TextEditorViewModel viewModel, CRDTDocument document) {
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        editorPanel = new EditorPanel(controller);
+        this.viewModel = viewModel;
 
+        Menu menu = new Menu(this.viewModel);
+        setJMenuBar(menu);
+
+        stateVisual = new StateVisual();
+        stateVisualContainer = new JScrollPane(stateVisual);
+        stateVisualContainer.setVisible(false);
+        this.viewModel.setImageListener(new TextEditorViewModelImageListener() {
+            @Override
+            public void updateImage(byte[] image) {
+                stateVisualContainer.setVisible(image != null);
+                stateVisual.updateImage(image);
+            }
+        });
+
+        editorPanel = new EditorPanel(this.viewModel, document);
+
+        layeredPane = new JLayeredPane();
+        layeredPane.add(stateVisualContainer, JLayeredPane.PALETTE_LAYER);
+        layeredPane.add(editorPanel, JLayeredPane.DEFAULT_LAYER);
+
+        gLayout = new GroupLayout(layeredPane);
         gLayout.setHorizontalGroup(
                 gLayout.createSequentialGroup()
                         .addContainerGap(60, Short.MAX_VALUE)
@@ -55,11 +78,29 @@ public class MainFrame extends JFrame {
                 gLayout.createSequentialGroup()
                         .addComponent(editorPanel));
 
-        getContentPane().add(editorPanel);
-    }
+        layeredPane.setLayout(gLayout);
 
-    public EditorPanel getEditorPanel() {
-        return editorPanel;
+        setContentPane(layeredPane);
+
+        setPreferredSize(new Dimension(1000, getPreferredSize().height));
+
+        int stateVisualContainerWidth = 180;
+        stateVisualContainer
+                .setPreferredSize(new Dimension(stateVisualContainerWidth, editorPanel.getPreferredSize().height));
+        stateVisualContainer.setBounds(getPreferredSize().width - stateVisualContainerWidth, 0,
+                stateVisualContainerWidth, editorPanel.getPreferredSize().height);
+
+        pack();
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                stateVisualContainer
+                        .setPreferredSize(new Dimension(stateVisualContainerWidth, editorPanel.getHeight()));
+                stateVisualContainer.setBounds(getWidth() - stateVisualContainerWidth, 0, stateVisualContainerWidth,
+                        editorPanel.getHeight());
+            }
+        });
     }
 
 }
