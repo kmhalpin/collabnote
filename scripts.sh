@@ -13,6 +13,8 @@
 # client/build/results/jmh/res-1.csv
 
 # delay only
+sed 's/≈ 10⁻³/0.001/g' client/build/results/jmh/human.txt > client/build/results/jmh/human-clean.txt
+sed 's/≈ 10⁻⁴/0.001/g' client/build/results/jmh/human-clean.txt > client/build/results/jmh/human.txt
 grep -v churn client/build/results/jmh/human.txt | grep Iteration -A 2 |\
 grep -v Warmup | xargs -L 2 |\
 sed -r 's/Iteration (.*): (.*\..*) ms\/op -: (.*) ms/\1, \2/' >\

@@ -197,7 +197,7 @@ public class GarbageCollectorManager extends Thread implements CRDTRemoteTransac
         lock.unlock();
         DataPayload data = DataPayload.deletePayload(this.collaborate.shareID,
                 result.getSecond().serialize());
-        data.setAgent(result.getSecond().serialize().id.agent);
+        // data.setAgent(result.getSecond().serialize().id.agent);
         this.collaborate.broadcast(data);
     }
 

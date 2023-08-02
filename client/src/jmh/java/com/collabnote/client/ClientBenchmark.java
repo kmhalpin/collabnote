@@ -167,8 +167,8 @@ public class ClientBenchmark {
         public void tearDown() {
             try {
                 // demo
-                // Thread.sleep(3000);
-                Thread.sleep(35000);
+                Thread.sleep(3000);
+                // Thread.sleep(35000);
                 doTearDown();
             } catch (InterruptedException e) {
                 e.printStackTrace();

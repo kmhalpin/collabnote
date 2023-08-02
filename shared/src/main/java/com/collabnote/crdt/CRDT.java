@@ -335,10 +335,13 @@ public class CRDT {
                             || (o.getOriginRight() != null && item.getOriginRight() != null
                                     && o.getOriginRight().id.agent == item.getOriginRight().id.agent
                                     && o.getOriginRight().id.seq == item.getOriginRight().id.seq)) {
+                        // (optimization) break when conflicting item has same right origin
                         break;
                     }
                 } else if (o.getOriginLeft() != null && itemsBeforeOrigin.contains(o.getOriginLeft())) {
                     if (!conflictingItems.contains(o.getOriginLeft())) {
+                        // skips operations with non conflicting left reference (might be upper level)
+                        // 🤯🤯🤯🤯🤯🤯🤯🤯
                         left = o;
                         conflictingItems.clear();
                     }
