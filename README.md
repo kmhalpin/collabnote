@@ -7,14 +7,16 @@ gradle shared:jar
 
 2. To run server app jar
 ```bash
-gradle server:runJar
+gradle server:jarrun
 ```
 
 3. To run client app jar
 ```bash
-gradle client:runJar
+gradle client:jarrun
 ```
 
 ## Project Structure
 - Client App `client/src/java`
 - Server App `server/src/java`
+
+Source code for *"Optimization of YATA CRDT on Client-Server Based Real-Time Collaborative Text Editor"*
